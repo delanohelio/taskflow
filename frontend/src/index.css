@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+/* ── Google Fonts ─────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ── Tailwind v4 theme (replaces tailwind.config.js) ─────────────────── */
+@theme {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Brand palette — indigo-tinted blue */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+
+  /* Surface / background palette — slate-based */
+  --color-surface-50: #f8fafc;
+  --color-surface-100: #f1f5f9;
+  --color-surface-200: #e2e8f0;
+  --color-surface-300: #cbd5e1;
+  --color-surface-400: #94a3b8;
+  --color-surface-500: #64748b;
+  --color-surface-600: #475569;
+  --color-surface-700: #334155;
+  --color-surface-800: #1e293b;
+  --color-surface-900: #0f172a;
+
+  /* Semantic colors */
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+  --color-success: #10b981;
+  --color-info: #3b82f6;
+}
+
+/* ── Global styles ─────────────────────────────────────────────────────── */
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--color-surface-50);
+  color: var(--color-surface-900);
+}
+
+/* ── Custom scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-surface-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-surface-400); }
+
+/* ── Drag-over column feedback ─────────────────────────────────────────── */
+.drag-over {
+  background-color: color-mix(in srgb, var(--color-brand-500) 8%, transparent);
+  outline: 2px dashed var(--color-brand-400);
+  outline-offset: -2px;
+  border-radius: 12px;
+}
+
+/* ── Priority dot pulse ────────────────────────────────────────────────── */
+@keyframes priority-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.6; transform: scale(1.15); }
+}
+.priority-dot-high { animation: priority-pulse 2s ease-in-out infinite; }
+
+/* ── Card entrance ─────────────────────────────────────────────────────── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.card-enter { animation: fadeSlideIn 0.25s ease-out; }
+
+/* ── Modal backdrop ────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal-backdrop { animation: fadeIn 0.2s ease-out; }
+.modal-content  { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* ── Subtle glow on drag ──────────────────────────────────────────────── */
+.dragging {
+  opacity: 0.85;
+  box-shadow: 0 12px 28px -4px rgba(99, 102, 241, 0.25),
+              0 4px 10px -2px rgba(99, 102, 241, 0.15);
+  transform: rotate(2deg) scale(1.03);
+  z-index: 50;
+}
+
+/* ── Sidebar active state ──────────────────────────────────────────────── */
+.sidebar-item-active {
+  background: var(--color-brand-50);
+  color: var(--color-brand-700);
+  font-weight: 600;
+}
