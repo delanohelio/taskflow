@@ -1,0 +1,39 @@
+# OS Files
+.DS_Store
+.DS_Store?
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Python (Backend)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node & Vite (Frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+
+# Environments & Secrets
+.env
+.env.local
+frontend/.env
+frontend/.env.local
+
+# Databases & Persisted Volume Data
+backend/tasks.db
+data/
+*.db
+*.sqlite3
