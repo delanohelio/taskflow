@@ -15,6 +15,15 @@ const api = axios.create({
   timeout: 15_000,
 });
 
+// Interceptor to inject password from localStorage in request headers
+api.interceptors.request.use((config) => {
+  const pwd = localStorage.getItem("taskflow_pwd");
+  if (pwd) {
+    config.headers["X-App-Password"] = pwd;
+  }
+  return config;
+});
+
 // ── Task CRUD ────────────────────────────────────────────────────────────
 
 export async function fetchBoard(): Promise<BoardData> {

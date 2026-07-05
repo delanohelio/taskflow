@@ -143,7 +143,25 @@ Após criar as imagens, você pode rodar os containers individualmente informand
 
 ---
 
-## 5. Resolução de Problemas Comuns
+## 5. Proteção por Senha (Opcional)
+
+A aplicação conta com um sistema de autenticação opcional. Para ativar a exigência de senha:
+
+1. Defina a variável de ambiente `APP_PASSWORD` na inicialização do Docker Compose:
+   ```bash
+   APP_PASSWORD=minhasenha docker compose up -d
+   ```
+   *Ou configure a variável de ambiente em um arquivo `.env` na raiz do projeto:*
+   ```env
+   APP_PASSWORD=minhasenha
+   ```
+
+2. Ao acessar a aplicação, a tela de acesso restrito será exibida solicitando a senha. O frontend armazenará a senha informada no `localStorage` do seu navegador para não precisar digitá-la novamente.
+3. Para fechar a sessão e bloquear o painel novamente, clique no botão **Sair** localizado no rodapé do menu lateral (Sidebar).
+
+---
+
+## 6. Resolução de Problemas Comuns
 
 ### Banco de dados bloqueado ou erro de permissão (SQLite)
 Se o container do backend falhar ao iniciar reportando erros de permissão de escrita no volume de dados, certifique-se de que a pasta local `./data` no host possui as permissões corretas de leitura e escrita para o usuário que executa os processos do Docker.

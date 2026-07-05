@@ -6,6 +6,7 @@ import type { Task } from "@/types/task";
 import { useTasks } from "@/hooks/useTasks";
 
 import Sidebar from "@/components/layout/Sidebar";
+import LoginScreen from "@/components/layout/LoginScreen";
 import KanbanBoard from "@/components/board/KanbanBoard";
 import DailyReviewBanner from "@/components/board/DailyReviewBanner";
 import CreateTaskModal from "@/components/modals/CreateTaskModal";
@@ -25,6 +26,7 @@ export default function App() {
     updateTask,
     moveTask,
     deleteTask,
+    refreshBoard,
   } = useTasks();
 
   // ── UI state ───────────────────────────────────────────────────────
@@ -32,6 +34,12 @@ export default function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  // ── Authentication handler ──────────────────────────────────────────
+  const handleLogin = useCallback(async (password: string) => {
+    localStorage.setItem("taskflow_pwd", password);
+    await refreshBoard();
+  }, [refreshBoard]);
 
   // ── Tag filter toggle ──────────────────────────────────────────────
   const handleToggleTag = useCallback((tag: string) => {
@@ -99,6 +107,11 @@ export default function App() {
 
   // ── Error state ────────────────────────────────────────────────────
   if (error) {
+    if (error === "AUTH_REQUIRED") {
+      const hasStoredPassword = localStorage.getItem("taskflow_pwd") !== null;
+      return <LoginScreen onLogin={handleLogin} hasError={hasStoredPassword} />;
+    }
+
     return (
       <div className="flex h-screen items-center justify-center bg-surface-50">
         <div className="max-w-sm rounded-xl border border-red-200 bg-red-50 p-6 text-center">

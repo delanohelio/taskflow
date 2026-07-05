@@ -9,6 +9,7 @@ import {
   Zap,
   List,
   Archive,
+  LogOut,
 } from "lucide-react";
 import type { BoardData, Task } from "@/types/task";
 import { formatStartDateTime, formatDueDate } from "@/utils/helpers";
@@ -255,10 +256,22 @@ export default function Sidebar({
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-surface-100 px-5 py-3">
+      <div className="border-t border-surface-100 px-5 py-3 flex items-center justify-between">
         <p className="text-[11px] text-surface-400">
           TaskFlow v1.0 — Kanban Temporal
         </p>
+        {localStorage.getItem("taskflow_pwd") && (
+          <button
+            onClick={() => {
+              localStorage.removeItem("taskflow_pwd");
+              window.location.reload();
+            }}
+            className="flex items-center gap-1 text-[11px] font-semibold text-brand-600 hover:text-brand-800 transition-colors cursor-pointer"
+          >
+            <LogOut className="h-3 w-3" />
+            <span>Sair</span>
+          </button>
+        )}
       </div>
     </aside>
   );

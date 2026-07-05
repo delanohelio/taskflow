@@ -1,13 +1,29 @@
 """FastAPI application entry point for TaskFlow."""
 
 import asyncio
+import os
 from contextlib import asynccontextmanager
+from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine, Base  # noqa: F401 — ensures tables are created
 from .routes.tasks import router as tasks_router
+
+
+# ── Password Verification ────────────────────────────────────────────────
+def verify_app_password(request: Request, x_app_password: Optional[str] = Header(None)):
+    """Verify X-App-Password header against APP_PASSWORD environment variable if set."""
+    if request.url.path == "/health":
+        return
+    app_password = os.environ.get("APP_PASSWORD")
+    if app_password and x_app_password != app_password:
+        raise HTTPException(
+            status_code=401,
+            detail="Senha de acesso inválida ou ausente"
+        )
+
 
 
 # ── Lifecycle ────────────────────────────────────────────────────────────
@@ -62,6 +78,7 @@ app = FastAPI(
     description="Kanban board com gatilhos temporais — FastAPI + SQLite",
     version="1.0.0",
     lifespan=lifespan,
+    dependencies=[Depends(verify_app_password)],
 )
 
 
