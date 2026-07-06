@@ -9,12 +9,14 @@ interface CreateTaskModalProps {
   parentId?: number | null;
   onSubmit: (payload: CreateTaskPayload) => Promise<void>;
   onClose: () => void;
+  availableTags?: string[];
 }
 
 export default function CreateTaskModal({
   parentId = null,
   onSubmit,
   onClose,
+  availableTags = [],
 }: CreateTaskModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -176,6 +178,7 @@ export default function CreateTaskModal({
             <div className="flex gap-2">
               <input
                 id="task-tag-input"
+                list="available-tags-list"
                 type="text"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
@@ -188,6 +191,11 @@ export default function CreateTaskModal({
                 placeholder="Digite e pressione Enter"
                 className="flex-1 rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               />
+              <datalist id="available-tags-list">
+                {availableTags.map((tag) => (
+                  <option key={tag} value={tag} />
+                ))}
+              </datalist>
               <button
                 type="button"
                 onClick={addTag}

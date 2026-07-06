@@ -46,17 +46,41 @@ async def _temporal_trigger_loop():
     """Periodically promote standby tasks whose start_datetime has passed."""
     from .database import SessionLocal
     from .models.task import Task
-    from datetime import datetime
+    from datetime import datetime, timedelta
 
     while True:
         await asyncio.sleep(60)
         db = SessionLocal()
         try:
             now = datetime.now()
+            # 1. Promote standby tasks
             standby_tasks = db.query(Task).filter(Task.status == "standby", Task.archived.is_(False)).all()
             for task in standby_tasks:
                 if not task.start_datetime or task.start_datetime <= now:
                     task.status = "todo"
+
+            # 2. Auto-archive done tasks
+            auto_archive_minutes_str = os.environ.get("AUTO_ARCHIVE_AFTER_MINUTES")
+            if auto_archive_minutes_str:
+                try:
+                    auto_archive_minutes = int(auto_archive_minutes_str)
+                    if auto_archive_minutes > 0:
+                        threshold_time = now - timedelta(minutes=auto_archive_minutes)
+                        overdue_done_tasks = (
+                            db.query(Task)
+                            .filter(
+                                Task.status == "done",
+                                Task.archived.is_(False),
+                                Task.completed_at.isnot(None),
+                                Task.completed_at <= threshold_time,
+                            )
+                            .all()
+                        )
+                        for task in overdue_done_tasks:
+                            task.archived = True
+                except ValueError:
+                    pass
+
             db.commit()
         except Exception:
             db.rollback()

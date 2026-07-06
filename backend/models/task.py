@@ -4,7 +4,7 @@ from datetime import date, datetime, timezone
 from typing import Optional
 
 from sqlalchemy import Date, DateTime, ForeignKey, String, Text
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, validates
 
 
 class Base(DeclarativeBase):
@@ -76,6 +76,19 @@ class Task(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, default=None, nullable=True
+    )
+
+    @validates("status")
+    def validate_status(self, key, value):
+        # We use getattr/dict access to avoid recursion issues or uninitialized attr access
+        current_status = getattr(self, "status", None)
+        if value == "done" and current_status != "done":
+            self.completed_at = datetime.now()
+        elif value != "done" and current_status == "done":
+            self.completed_at = None
+        return value
 
     # ── Convenience helpers (used by routes / serialisation) ───────────
 

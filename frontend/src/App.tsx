@@ -89,6 +89,21 @@ export default function App() {
     );
   }, [archivedTasks, selectedTags]);
 
+  // Calculate list of all unique tags in the board for autocomplete
+  const availableTags = useMemo(() => {
+    const tagsSet = new Set<string>();
+    const allTasks = [
+      ...board.todo,
+      ...board.doing,
+      ...board.done,
+      ...board.standby,
+    ];
+    for (const task of allTasks) {
+      task.tag_list.forEach((t) => tagsSet.add(t));
+    }
+    return Array.from(tagsSet).sort();
+  }, [board]);
+
   // ── Auth Loading state ─────────────────────────────────────────────
   if (authLoading) {
     return (
@@ -221,6 +236,7 @@ export default function App() {
             await createTask(payload);
           }}
           onClose={() => setShowCreateModal(false)}
+          availableTags={availableTags}
         />
       )}
 
@@ -231,6 +247,7 @@ export default function App() {
           onUpdate={updateTask}
           onCreate={createTask}
           onDelete={deleteTask}
+          availableTags={availableTags}
         />
       )}
     </div>

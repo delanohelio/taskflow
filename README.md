@@ -17,7 +17,32 @@ Aplicação full-stack de gerenciamento de tarefas pessoais com quadro Kanban in
 
 ## Como rodar
 
-### 1. Backend (FastAPI)
+### 1. Usando Docker (Recomendado)
+
+O projeto está totalmente dockerizado. Para iniciar toda a stack (Backend, Frontend e Banco de dados SQLite persistente) com um único comando:
+
+```bash
+# Iniciar o painel sem senha
+docker compose up -d
+
+# Iniciar o painel com senha de acesso à tela
+PAGE_PASSWORD=minhasenha docker compose up -d
+
+# Iniciar com senha e auto-arquivamento de tarefas concluídas após 60 minutos
+PAGE_PASSWORD=minhasenha AUTO_ARCHIVE_AFTER_MINUTES=60 docker compose up -d
+```
+
+O Frontend estará disponível em: `http://localhost:4000`  
+O Backend estará disponível em: `http://localhost:8000`
+
+Para parar os serviços:
+```bash
+docker compose down
+```
+
+### 2. Desenvolvimento Local (Manual)
+
+#### Backend (FastAPI)
 
 ```bash
 # Na raiz do projeto
@@ -34,7 +59,7 @@ uvicorn backend.app:app --reload --port 8000
 O backend estará disponível em: `http://localhost:8000`  
 Documentação da API: `http://localhost:8000/docs`
 
-### 2. Frontend (React + Vite)
+#### Frontend (React + Vite)
 
 ```bash
 cd frontend
@@ -45,29 +70,15 @@ npm run dev
 O frontend estará disponível em: `http://localhost:5173`  
 O Vite faz proxy de `/api` → `http://localhost:8000` automaticamente.
 
-### 3. Rodando ambos simultaneamente
-
-Abra dois terminais:
-
-**Terminal 1 — Backend:**
-```bash
-source .venv/bin/activate && uvicorn backend.app:app --reload --port 8000
-```
-
-**Terminal 2 — Frontend:**
-```bash
-cd frontend && npm run dev
-```
-
 ## Arquitetura
 
 ```
 web_app/
 ├── backend/
-│   ├── app.py              # Entry point FastAPI (lifespan, CORS, rotas)
-│   ├── database.py         # Engine SQLAlchemy + sessão
+│   ├── app.py              # Entry point FastAPI (lifespan, CORS, rotas, auth)
+│   ├── database.py         # Engine SQLAlchemy + migrações automáticas
 │   ├── models/
-│   │   └── task.py         # Modelo ORM Task (hierárquico)
+│   │   └── task.py         # Modelo ORM Task (hierárquico e auditado)
 │   ├── schemas/
 │   │   └── task.py         # Pydantic v2 schemas (request/response)
 │   ├── routes/
@@ -76,13 +87,15 @@ web_app/
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx              # Componente raiz
-│   │   ├── hooks/useTasks.ts    # Custom hook (fetch + mutations)
+│   │   ├── hooks/
+│   │   │   ├── useTasks.ts      # Custom hook (fetch + mutations)
+│   │   │   └── useAuth.ts       # Hook de autenticação de página
 │   │   ├── services/api.ts      # Cliente Axios
 │   │   ├── types/task.ts        # Tipos TypeScript
 │   │   ├── utils/               # Constantes e helpers
 │   │   └── components/
 │   │       ├── board/           # KanbanBoard, KanbanColumn, TaskCard, Banner
-│   │       ├── layout/          # Sidebar
+│   │       ├── layout/          # Sidebar, LoginScreen
 │   │       ├── modals/          # CreateTaskModal, TaskDetailModal
 │   │       └── ui/              # PriorityIndicator, TagBadge, ProgressBar
 │   ├── index.html
@@ -102,7 +115,30 @@ web_app/
 - **Adiamento Manual**: Qualquer tarefa ativa pode ser adiada ao definir seu `start_datetime` no futuro, o que reverterá seu status para `standby` e a removerá temporariamente das colunas do quadro ativo.
 - O backend verifica isso a cada 60 segundos (background task) e o frontend a cada 30 segundos (polling)
 
-### Arquivamento de Tarefas
+### Proteção por Senha (Opcional)
+
+- Se a variável de ambiente `PAGE_PASSWORD` estiver definida no servidor, o frontend exibirá uma tela de login restrita antes de renderizar a interface de tarefas.
+- Senha correta é guardada no `localStorage` do navegador para evitar a necessidade de logins repetitivos.
+- Para deslogar e bloquear o painel novamente, basta clicar no botão **Sair** no rodapé do menu lateral (Sidebar).
+
+### Auto-arquivamento de Tarefas Concluídas (Opcional)
+
+- Permite configurar o arquivamento automático de tarefas no status `done` após um período de tempo.
+- Defina a variável de ambiente `AUTO_ARCHIVE_AFTER_MINUTES` com o tempo limite (em minutos).
+- Uma tarefa executada em segundo plano no servidor verifica as tarefas concluídas a cada 60 segundos e as arquiva caso tenham atingido o tempo limite.
+
+### Autocomplete de Tags
+
+- Ao cadastrar ou editar tags no `CreateTaskModal` e `TaskDetailModal`, um autocomplete sugere tags já utilizadas anteriormente no quadro, facilitando a padronização das tags.
+
+### Responsividade (Mobile e Tablets)
+
+- Toda a aplicação foi otimizada para smartphones e tablets.
+- O menu lateral (Sidebar) vira um menu deslizante (sliding drawer) acionado por um botão Hamburger.
+- As colunas do Kanban se empilham verticalmente em telas pequenas.
+- Os modais de tarefas passam a ocupar tela cheia com rolagem interna para melhorar a usabilidade em celulares.
+
+### Arquivamento Manual de Tarefas
 
 - Tarefas concluídas ou que não são mais necessárias podem ser arquivadas (`archived = true`).
 - Tarefas arquivadas são completamente ocultadas do Quadro Kanban e da Listagem principal.
@@ -132,3 +168,5 @@ web_app/
 | `GET` | `/api/tasks/board` | Board agrupado por status |
 | `GET` | `/api/tasks/review` | Resumo diário |
 | `POST` | `/api/tasks/trigger-temporal` | Forçar re-avaliação temporal |
+| `GET` | `/api/auth/config` | Retorna se a senha é exigida no painel |
+| `POST` | `/api/auth/verify` | Valida a senha enviada pelo usuário |

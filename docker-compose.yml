@@ -9,6 +9,7 @@ services:
     environment:
       - DB_PATH=/app/data/tasks.db
       - PAGE_PASSWORD=${PAGE_PASSWORD:-}
+      - AUTO_ARCHIVE_AFTER_MINUTES=${AUTO_ARCHIVE_AFTER_MINUTES:-}
     volumes:
       - ./data:/app/data
     restart: unless-stopped

@@ -27,6 +27,7 @@ interface TaskDetailModalProps {
   onUpdate: (taskId: number, payload: UpdateTaskPayload) => Promise<Task>;
   onCreate: (payload: CreateTaskPayload) => Promise<Task>;
   onDelete: (taskId: number) => Promise<void>;
+  availableTags?: string[];
 }
 
 export default function TaskDetailModal({
@@ -35,6 +36,7 @@ export default function TaskDetailModal({
   onUpdate,
   onCreate,
   onDelete,
+  availableTags = [],
 }: TaskDetailModalProps) {
   const [task, setTask] = useState<Task>(initialTask);
   const [isEditing, setIsEditing] = useState(false);
@@ -364,6 +366,7 @@ export default function TaskDetailModal({
                 </label>
                 <div className="flex gap-2">
                   <input
+                    list="available-tags-detail-list"
                     type="text"
                     value={editTagInput}
                     onChange={(e) => setEditTagInput(e.target.value)}
@@ -376,6 +379,11 @@ export default function TaskDetailModal({
                     placeholder="Adicionar tag..."
                     className="flex-1 rounded-lg border border-surface-300 bg-white px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
                   />
+                  <datalist id="available-tags-detail-list">
+                    {availableTags.map((tag) => (
+                      <option key={tag} value={tag} />
+                    ))}
+                  </datalist>
                   <button
                     type="button"
                     onClick={addEditTag}

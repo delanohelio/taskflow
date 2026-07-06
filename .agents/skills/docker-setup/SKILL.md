@@ -161,7 +161,21 @@ A aplicação conta com um sistema de autenticação opcional para a tela. Para 
 
 ---
 
-## 6. Resolução de Problemas Comuns
+## 6. Auto-arquivamento de Tarefas Concluídas (Opcional)
+
+O TaskFlow possui um mecanismo automático em segundo plano que arquiva tarefas concluídas (status `done`) após um período de tempo.
+
+Para configurar o tempo limite de auto-arquivamento:
+1. Defina a variável de ambiente `AUTO_ARCHIVE_AFTER_MINUTES` (em minutos) no arquivo `.env` ou ao iniciar os containers:
+   ```bash
+   AUTO_ARCHIVE_AFTER_MINUTES=60 docker compose up -d
+   ```
+2. O servidor em segundo plano verificará as tarefas concluídas a cada 60 segundos e moverá automaticamente para a seção de **Arquivadas** qualquer tarefa concluída há mais de 60 minutos (no exemplo).
+3. Se a variável não for definida ou for definida como `0`, o auto-arquivamento permanecerá desativado.
+
+---
+
+## 7. Resolução de Problemas Comuns
 
 ### Banco de dados bloqueado ou erro de permissão (SQLite)
 Se o container do backend falhar ao iniciar reportando erros de permissão de escrita no volume de dados, certifique-se de que a pasta local `./data` no host possui as permissões corretas de leitura e escrita para o usuário que executa os processos do Docker.
@@ -175,3 +189,4 @@ Se você modificou arquivos de código e a alteração não aparece no Docker, f
 docker compose build --no-cache
 docker compose up -d
 ```
+

@@ -37,6 +37,18 @@ with engine.begin() as conn:
         except Exception as e:
             print(f"Migration error: {e}")
 
+# Add migration to ensure 'completed_at' column exists
+with engine.begin() as conn:
+    try:
+        conn.execute(text("SELECT completed_at FROM tasks LIMIT 1"))
+    except Exception:
+        try:
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN completed_at DATETIME DEFAULT NULL"))
+            print("Successfully migrated tasks table to include 'completed_at' column.")
+        except Exception as e:
+            print(f"Migration error (completed_at): {e}")
+
+
 
 def get_db():
     """FastAPI dependency: yields a database session per request."""
