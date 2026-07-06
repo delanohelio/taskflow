@@ -26,7 +26,7 @@ export default function KanbanColumn({
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-[150px] md:min-h-0 flex-1 flex-col w-full md:min-w-[280px]">
       {/* Column header */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">

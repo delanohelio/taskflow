@@ -12,17 +12,10 @@ from .database import engine, Base  # noqa: F401 — ensures tables are created
 from .routes.tasks import router as tasks_router
 
 
-# ── Password Verification ────────────────────────────────────────────────
-def verify_app_password(request: Request, x_app_password: Optional[str] = Header(None)):
-    """Verify X-App-Password header against APP_PASSWORD environment variable if set."""
-    if request.url.path == "/health":
-        return
-    app_password = os.environ.get("APP_PASSWORD")
-    if app_password and x_app_password != app_password:
-        raise HTTPException(
-            status_code=401,
-            detail="Senha de acesso inválida ou ausente"
-        )
+from pydantic import BaseModel
+
+class PasswordVerify(BaseModel):
+    password: str
 
 
 
@@ -78,7 +71,6 @@ app = FastAPI(
     description="Kanban board com gatilhos temporais — FastAPI + SQLite",
     version="1.0.0",
     lifespan=lifespan,
-    dependencies=[Depends(verify_app_password)],
 )
 
 
@@ -98,6 +90,18 @@ app.add_middleware(
 
 
 # ── Routes ───────────────────────────────────────────────────────────────
+
+@app.get("/api/auth/config")
+async def get_auth_config():
+    require_password = bool(os.environ.get("PAGE_PASSWORD"))
+    return {"require_password": require_password}
+
+@app.post("/api/auth/verify")
+async def verify_page_password(payload: PasswordVerify):
+    page_password = os.environ.get("PAGE_PASSWORD")
+    if not page_password:
+        return {"valid": True}
+    return {"valid": payload.password == page_password}
 
 app.include_router(tasks_router, prefix="/api")
 

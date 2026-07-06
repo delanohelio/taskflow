@@ -65,7 +65,7 @@ export default function CreateTaskModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal-content w-full max-w-lg rounded-2xl border border-surface-200 bg-white p-6 shadow-2xl">
+      <div className="modal-content w-full h-full sm:h-auto sm:max-w-lg rounded-none sm:rounded-2xl border border-surface-200 bg-white p-6 shadow-2xl overflow-y-auto">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-lg font-bold text-surface-900">
@@ -115,7 +115,7 @@ export default function CreateTaskModal({
           </div>
 
           {/* Date fields */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="task-start" className="mb-1 flex items-center gap-1.5 text-sm font-medium text-surface-700">
                 <CalendarPlus className="h-3.5 w-3.5" />

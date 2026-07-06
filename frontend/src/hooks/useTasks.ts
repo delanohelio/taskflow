@@ -6,7 +6,6 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import axios from "axios";
 import type { BoardData, CreateTaskPayload, DailyReview, Task, UpdateTaskPayload } from "@/types/task";
 import * as api from "@/services/api";
 
@@ -64,11 +63,7 @@ export function useTasks(): UseTasksReturn {
       setArchivedTasks(archivedData);
       setError(null);
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 401) {
-        setError("AUTH_REQUIRED");
-      } else {
-        setError(err instanceof Error ? err.message : "Erro ao carregar tarefas");
-      }
+      setError(err instanceof Error ? err.message : "Erro ao carregar tarefas");
     } finally {
       setLoading(false);
     }

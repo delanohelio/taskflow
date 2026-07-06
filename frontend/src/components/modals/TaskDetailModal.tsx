@@ -166,7 +166,7 @@ export default function TaskDetailModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal-content w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-surface-200 bg-white shadow-2xl">
+      <div className="modal-content w-full h-full sm:h-auto sm:max-h-[85vh] sm:max-w-2xl overflow-y-auto rounded-none sm:rounded-2xl border border-surface-200 bg-white shadow-2xl">
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-surface-100 bg-white/95 px-6 py-4 backdrop-blur-sm">
           <div className="flex items-center gap-3">
@@ -330,7 +330,7 @@ export default function TaskDetailModal({
               </div>
 
               {/* Dates Grid */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="edit-start" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-surface-500">
                     Início (agendamento)

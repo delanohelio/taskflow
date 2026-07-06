@@ -145,18 +145,18 @@ Após criar as imagens, você pode rodar os containers individualmente informand
 
 ## 5. Proteção por Senha (Opcional)
 
-A aplicação conta com um sistema de autenticação opcional. Para ativar a exigência de senha:
+A aplicação conta com um sistema de autenticação opcional para a tela. Para ativar a exigência de senha:
 
-1. Defina a variável de ambiente `APP_PASSWORD` na inicialização do Docker Compose:
+1. Defina a variável de ambiente `PAGE_PASSWORD` na inicialização do Docker Compose:
    ```bash
-   APP_PASSWORD=minhasenha docker compose up -d
+   PAGE_PASSWORD=minhasenha docker compose up -d
    ```
    *Ou configure a variável de ambiente em um arquivo `.env` na raiz do projeto:*
    ```env
-   APP_PASSWORD=minhasenha
+   PAGE_PASSWORD=minhasenha
    ```
 
-2. Ao acessar a aplicação, a tela de acesso restrito será exibida solicitando a senha. O frontend armazenará a senha informada no `localStorage` do seu navegador para não precisar digitá-la novamente.
+2. Ao acessar a aplicação, a tela de acesso restrito será exibida solicitando a senha. O frontend validará e armazenará a senha informada no `localStorage` do seu navegador para não precisar digitá-la novamente.
 3. Para fechar a sessão e bloquear o painel novamente, clique no botão **Sair** localizado no rodapé do menu lateral (Sidebar).
 
 ---

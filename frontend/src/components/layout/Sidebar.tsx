@@ -24,6 +24,9 @@ interface SidebarProps {
   onChangeScreen: (screen: "board" | "list" | "standby" | "archived") => void;
   archivedCount: number;
   onTaskClick: (task: Task) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+  onLogout?: () => void;
 }
 
 export default function Sidebar({
@@ -35,6 +38,9 @@ export default function Sidebar({
   onChangeScreen,
   archivedCount,
   onTaskClick,
+  isOpen = false,
+  onClose,
+  onLogout,
 }: SidebarProps) {
   // Collect all unique tags across all tasks
   const allTags = new Set<string>();
@@ -54,8 +60,19 @@ export default function Sidebar({
   const standbyCount = board.standby.length;
 
   return (
-    <aside className="flex h-full w-72 flex-shrink-0 flex-col border-r border-surface-200 bg-white">
-      {/* Logo */}
+    <>
+      {/* Mobile sidebar backdrop overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity md:hidden cursor-pointer"
+          onClick={onClose}
+        />
+      )}
+
+      <aside className={`fixed inset-y-0 left-0 z-50 flex h-full w-72 flex-shrink-0 flex-col border-r border-surface-200 bg-white transition-transform duration-300 md:static md:translate-x-0 ${
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      }`}>
+        {/* Logo */}
       <div className="flex items-center gap-2.5 border-b border-surface-100 px-5 py-4">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 shadow-sm">
           <Zap className="h-4 w-4 text-white" />
@@ -260,12 +277,9 @@ export default function Sidebar({
         <p className="text-[11px] text-surface-400">
           TaskFlow v1.0 — Kanban Temporal
         </p>
-        {localStorage.getItem("taskflow_pwd") && (
+        {onLogout && (
           <button
-            onClick={() => {
-              localStorage.removeItem("taskflow_pwd");
-              window.location.reload();
-            }}
+            onClick={onLogout}
             className="flex items-center gap-1 text-[11px] font-semibold text-brand-600 hover:text-brand-800 transition-colors cursor-pointer"
           >
             <LogOut className="h-3 w-3" />
@@ -274,5 +288,6 @@ export default function Sidebar({
         )}
       </div>
     </aside>
+    </>
   );
 }

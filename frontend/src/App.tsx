@@ -1,9 +1,10 @@
 /** Root application component: sidebar + Kanban board + modals. */
 
 import { useCallback, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Menu } from "lucide-react";
 import type { Task } from "@/types/task";
 import { useTasks } from "@/hooks/useTasks";
+import { useAuth } from "@/hooks/useAuth";
 
 import Sidebar from "@/components/layout/Sidebar";
 import LoginScreen from "@/components/layout/LoginScreen";
@@ -29,17 +30,14 @@ export default function App() {
     refreshBoard,
   } = useTasks();
 
-  // ── UI state ───────────────────────────────────────────────────────
+  // ── Authentication & UI states ─────────────────────────────────────
+  const { unlocked, loading: authLoading, error: authError, login, logout } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const [activeScreen, setActiveScreen] = useState<"board" | "list" | "standby" | "archived">("board");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-
-  // ── Authentication handler ──────────────────────────────────────────
-  const handleLogin = useCallback(async (password: string) => {
-    localStorage.setItem("taskflow_pwd", password);
-    await refreshBoard();
-  }, [refreshBoard]);
 
   // ── Tag filter toggle ──────────────────────────────────────────────
   const handleToggleTag = useCallback((tag: string) => {
@@ -91,7 +89,26 @@ export default function App() {
     );
   }, [archivedTasks, selectedTags]);
 
-  // ── Loading state ──────────────────────────────────────────────────
+  // ── Auth Loading state ─────────────────────────────────────────────
+  if (authLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-surface-50">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
+          <p className="text-sm font-medium text-surface-500">
+            Verificando acesso...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Auth Lock Screen ────────────────────────────────────────────────
+  if (!unlocked) {
+    return <LoginScreen onLogin={login} hasError={authError !== null} />;
+  }
+
+  // ── Task Loading state ─────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-surface-50">
@@ -107,10 +124,6 @@ export default function App() {
 
   // ── Error state ────────────────────────────────────────────────────
   if (error) {
-    if (error === "AUTH_REQUIRED") {
-      const hasStoredPassword = localStorage.getItem("taskflow_pwd") !== null;
-      return <LoginScreen onLogin={handleLogin} hasError={hasStoredPassword} />;
-    }
 
     return (
       <div className="flex h-screen items-center justify-center bg-surface-50">
@@ -139,16 +152,31 @@ export default function App() {
         selectedTags={selectedTags}
         onToggleTag={handleToggleTag}
         activeScreen={activeScreen}
-        onChangeScreen={setActiveScreen}
+        onChangeScreen={(screen) => {
+          setActiveScreen(screen);
+          setSidebarOpen(false);
+        }}
         archivedCount={archivedTasks.length}
         onTaskClick={(task) => setSelectedTask(task)}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onLogout={logout}
       />
 
       {/* Main content */}
-      <main className="flex flex-1 flex-col overflow-hidden">
+      <main className="flex flex-1 flex-col overflow-hidden w-full">
         {/* Top bar */}
-        <header className="flex-shrink-0 border-b border-surface-200 bg-white/80 px-8 py-4 backdrop-blur-sm">
-          <DailyReviewBanner review={review} />
+        <header className="flex-shrink-0 border-b border-surface-200 bg-white/80 px-4 md:px-8 py-4 backdrop-blur-sm flex items-center gap-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="md:hidden rounded-lg p-2 hover:bg-surface-100 transition-colors"
+            aria-label="Abrir menu"
+          >
+            <Menu className="h-5 w-5 text-surface-500" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <DailyReviewBanner review={review} />
+          </div>
         </header>
 
         {/* Dynamic Screen Area */}

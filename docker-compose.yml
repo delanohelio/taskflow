@@ -8,7 +8,7 @@ services:
       - "8000:8000"
     environment:
       - DB_PATH=/app/data/tasks.db
-      - APP_PASSWORD=${APP_PASSWORD:-}
+      - PAGE_PASSWORD=${PAGE_PASSWORD:-}
     volumes:
       - ./data:/app/data
     restart: unless-stopped
