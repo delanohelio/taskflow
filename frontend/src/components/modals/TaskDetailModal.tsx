@@ -1,6 +1,7 @@
 /** Modal showing task details, editing, and subtask management. */
 
 import { useEffect, useState, type FormEvent } from "react";
+import { marked } from "marked";
 import {
   X,
   Trash2,
@@ -337,20 +338,25 @@ export default function TaskDetailModal({
               onChange={(e) => setEditDescription(e.target.value)}
               rows={4}
               className="mb-4 w-full resize-none rounded-lg border border-surface-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              placeholder="Adicionar descrição..."
+              placeholder="Adicionar descrição (Markdown aceito)..."
             />
           ) : (
-            <p
+            <div
               className="mb-4 cursor-pointer rounded-lg p-2 text-sm leading-relaxed text-surface-600 hover:bg-surface-50"
               onClick={() => setIsEditing(true)}
               title="Clique para editar"
             >
-              {task.description || (
+              {task.description ? (
+                <div
+                  className="prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: marked.parse(task.description) as string }}
+                />
+              ) : (
                 <span className="italic text-surface-400">
                   Sem descrição. Clique para adicionar.
                 </span>
               )}
-            </p>
+            </div>
           )}
 
           {/* ── Edit mode fields ────────────────────────────────────── */}
