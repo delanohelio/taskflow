@@ -192,6 +192,54 @@ export default function TaskDetailModal({
                 ? "Em Andamento"
                 : "Concluído"}
             </span>
+
+            {/* Quick status transition buttons */}
+            <div className="flex items-center gap-1.5 ml-2 border-l border-surface-200 pl-3">
+              {task.status === "todo" && (
+                <button
+                  onClick={async () => {
+                    await onUpdate(task.id, { status: "doing" });
+                    await refreshTask();
+                  }}
+                  className="rounded-lg bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer"
+                >
+                  Iniciar
+                </button>
+              )}
+              {task.status === "doing" && (
+                <>
+                  <button
+                    onClick={async () => {
+                      await onUpdate(task.id, { status: "todo" });
+                      await refreshTask();
+                    }}
+                    className="rounded-lg bg-surface-100 px-2 py-1 text-xs font-semibold text-surface-600 hover:bg-surface-200 transition-colors cursor-pointer"
+                  >
+                    Pausar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await onUpdate(task.id, { status: "done" });
+                      await refreshTask();
+                    }}
+                    className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer"
+                  >
+                    Concluir
+                  </button>
+                </>
+              )}
+              {task.status === "done" && (
+                <button
+                  onClick={async () => {
+                    await onUpdate(task.id, { status: "doing" });
+                    await refreshTask();
+                  }}
+                  className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+                >
+                  Refazer
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-1">
             <button

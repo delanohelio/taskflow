@@ -12,9 +12,10 @@ import ProgressBar from "@/components/ui/ProgressBar";
 interface TaskCardProps {
   task: Task;
   onClick: (task: Task) => void;
+  onMoveTask?: (taskId: number, newStatus: string) => Promise<Task>;
 }
 
-export default function TaskCard({ task, onClick }: TaskCardProps) {
+export default function TaskCard({ task, onClick, onMoveTask }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -101,6 +102,47 @@ export default function TaskCard({ task, onClick }: TaskCardProps) {
           </div>
         )}
       </div>
+
+      {/* Quick status action buttons (for mobile / easy access) */}
+      {onMoveTask && (
+        <div
+          className="mt-3 pt-3 border-t border-surface-100 flex justify-end gap-1.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {task.status === "todo" && (
+            <button
+              onClick={() => onMoveTask(task.id, "doing")}
+              className="flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer"
+            >
+              Iniciar
+            </button>
+          )}
+          {task.status === "doing" && (
+            <>
+              <button
+                onClick={() => onMoveTask(task.id, "todo")}
+                className="flex items-center gap-1 rounded-lg bg-surface-100 px-2.5 py-1 text-[11px] font-semibold text-surface-600 hover:bg-surface-200 transition-colors cursor-pointer"
+              >
+                Pausar
+              </button>
+              <button
+                onClick={() => onMoveTask(task.id, "done")}
+                className="flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer"
+              >
+                Concluir
+              </button>
+            </>
+          )}
+          {task.status === "done" && (
+            <button
+              onClick={() => onMoveTask(task.id, "doing")}
+              className="flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+            >
+              Refazer
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

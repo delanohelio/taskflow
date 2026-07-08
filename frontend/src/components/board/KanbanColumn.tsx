@@ -14,6 +14,7 @@ interface KanbanColumnProps {
   tasks: Task[];
   emptyMessage: string;
   onTaskClick: (task: Task) => void;
+  onMoveTask: (taskId: number, newStatus: string) => Promise<Task>;
 }
 
 export default function KanbanColumn({
@@ -22,6 +23,7 @@ export default function KanbanColumn({
   tasks,
   emptyMessage,
   onTaskClick,
+  onMoveTask,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
@@ -56,7 +58,12 @@ export default function KanbanColumn({
             </div>
           ) : (
             tasks.map((task) => (
-              <TaskCard key={task.id} task={task} onClick={onTaskClick} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onClick={onTaskClick}
+                onMoveTask={onMoveTask}
+              />
             ))
           )}
         </SortableContext>

@@ -90,6 +90,7 @@ export default function KanbanBoard({
             tasks={columnData[col.id] ?? []}
             emptyMessage={col.emptyMessage}
             onTaskClick={onTaskClick}
+            onMoveTask={onMoveTask}
           />
         ))}
       </div>

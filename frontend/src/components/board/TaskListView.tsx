@@ -236,10 +236,22 @@ export default function TaskListView({ tasks, onTaskClick, onUpdate }: TaskListV
                 </div>
 
                 {/* Status */}
-                <div className="col-span-2">
-                  <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getStatusBadgeClass(task.status)}`}>
-                    {getStatusLabel(task.status)}
-                  </span>
+                <div className="col-span-2" onClick={(e) => e.stopPropagation()}>
+                  <select
+                    value={task.status}
+                    onChange={async (e) => {
+                      const newStatus = e.target.value as Status;
+                      await onUpdate(task.id, { status: newStatus });
+                    }}
+                    className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold focus:outline-none cursor-pointer ${getStatusBadgeClass(task.status)}`}
+                  >
+                    <option value="todo" className="text-slate-800 bg-white">Para Fazer</option>
+                    <option value="doing" className="text-slate-800 bg-white">Em Andamento</option>
+                    <option value="done" className="text-slate-800 bg-white">Concluído</option>
+                    {task.status === "standby" && (
+                      <option value="standby" className="text-slate-800 bg-white" disabled>Stand-by</option>
+                    )}
+                  </select>
                 </div>
 
                 {/* Actions */}
