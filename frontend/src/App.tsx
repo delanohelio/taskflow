@@ -15,6 +15,7 @@ import TaskDetailModal from "@/components/modals/TaskDetailModal";
 import TaskListView from "@/components/board/TaskListView";
 import StandbyScreen from "@/components/board/StandbyScreen";
 import ArchivedScreen from "@/components/board/ArchivedScreen";
+import SettingsModal from "@/components/modals/SettingsModal";
 
 export default function App() {
   const {
@@ -33,6 +34,7 @@ export default function App() {
   // ── Authentication & UI states ─────────────────────────────────────
   const { unlocked, loading: authLoading, error: authError, login, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const [activeScreen, setActiveScreen] = useState<"board" | "list" | "standby" | "archived">("board");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -176,6 +178,7 @@ export default function App() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onLogout={logout}
+        onOpenSettings={() => setShowSettingsModal(true)}
       />
 
       {/* Main content */}
@@ -248,6 +251,12 @@ export default function App() {
           onCreate={createTask}
           onDelete={deleteTask}
           availableTags={availableTags}
+        />
+      )}
+      {showSettingsModal && (
+        <SettingsModal
+          onClose={() => setShowSettingsModal(false)}
+          onArchiveDone={refreshBoard}
         />
       )}
     </div>

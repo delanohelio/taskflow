@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 import type { BoardData, Task } from "@/types/task";
 import { KANBAN_COLUMNS } from "@/utils/constants";
+import { sortTasks } from "@/utils/sortTasks";
 import KanbanColumn from "./KanbanColumn";
 import TaskCard from "./TaskCard";
 
@@ -67,11 +68,11 @@ export default function KanbanBoard({
     }
   }
 
-  // Map column IDs to their task arrays
+  // Map column IDs to their task arrays (sorted by priority + due_date)
   const columnData: Record<string, Task[]> = {
-    todo: board.todo,
-    doing: board.doing,
-    done: board.done,
+    todo: sortTasks(board.todo),
+    doing: sortTasks(board.doing),
+    done: sortTasks(board.done),
   };
 
   return (

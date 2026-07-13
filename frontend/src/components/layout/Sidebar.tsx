@@ -10,6 +10,7 @@ import {
   List,
   Archive,
   LogOut,
+  Settings,
 } from "lucide-react";
 import type { BoardData, Task } from "@/types/task";
 import { formatStartDateTime, formatDueDate } from "@/utils/helpers";
@@ -27,6 +28,7 @@ interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
   onLogout?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export default function Sidebar({
@@ -41,6 +43,7 @@ export default function Sidebar({
   isOpen = false,
   onClose,
   onLogout,
+  onOpenSettings,
 }: SidebarProps) {
   // Collect all unique tags across all tasks
   const allTags = new Set<string>();
@@ -271,6 +274,19 @@ export default function Sidebar({
           </div>
         )}
       </nav>
+
+      {/* Settings button */}
+      {onOpenSettings && (
+        <div className="px-3 pb-2">
+          <button
+            onClick={onOpenSettings}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-surface-600 transition-colors hover:bg-surface-100"
+          >
+            <Settings className="h-4 w-4" />
+            <span>Configurações</span>
+          </button>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="border-t border-surface-100 px-5 py-3 flex items-center justify-between">

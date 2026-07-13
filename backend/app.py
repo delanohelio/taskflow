@@ -1,8 +1,10 @@
 """FastAPI application entry point for TaskFlow."""
 
 import asyncio
+import json
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, Header, Request
@@ -17,6 +19,32 @@ from pydantic import BaseModel
 class PasswordVerify(BaseModel):
     password: str
 
+class SettingsUpdate(BaseModel):
+    auto_archive_minutes: Optional[int] = None
+
+
+# ── Settings helpers ─────────────────────────────────────────────────────
+
+SETTINGS_PATH = Path(os.environ.get("DB_PATH", "/app/data/tasks.db")).parent / "settings.json"
+
+def _load_settings() -> dict:
+    if SETTINGS_PATH.exists():
+        try:
+            return json.loads(SETTINGS_PATH.read_text())
+        except Exception:
+            pass
+    # Fall back to env var
+    env_val = os.environ.get("AUTO_ARCHIVE_AFTER_MINUTES")
+    if env_val:
+        try:
+            return {"auto_archive_minutes": int(env_val)}
+        except ValueError:
+            pass
+    return {"auto_archive_minutes": None}
+
+def _save_settings(data: dict) -> None:
+    SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    SETTINGS_PATH.write_text(json.dumps(data))
 
 
 # ── Lifecycle ────────────────────────────────────────────────────────────
@@ -59,27 +87,32 @@ async def _temporal_trigger_loop():
                 if not task.start_datetime or task.start_datetime <= now:
                     task.status = "todo"
 
-            # 2. Auto-archive done tasks
-            auto_archive_minutes_str = os.environ.get("AUTO_ARCHIVE_AFTER_MINUTES")
-            if auto_archive_minutes_str:
-                try:
-                    auto_archive_minutes = int(auto_archive_minutes_str)
-                    if auto_archive_minutes > 0:
-                        threshold_time = now - timedelta(minutes=auto_archive_minutes)
-                        overdue_done_tasks = (
-                            db.query(Task)
-                            .filter(
-                                Task.status == "done",
-                                Task.archived.is_(False),
-                                Task.completed_at.isnot(None),
-                                Task.completed_at <= threshold_time,
-                            )
-                            .all()
-                        )
-                        for task in overdue_done_tasks:
-                            task.archived = True
-                except ValueError:
-                    pass
+            # 2. Auto-archive done tasks (settings file takes priority over env var)
+            settings = _load_settings()
+            auto_archive_minutes = settings.get("auto_archive_minutes")
+            if auto_archive_minutes is None:
+                # Fall back to env var
+                env_val = os.environ.get("AUTO_ARCHIVE_AFTER_MINUTES")
+                if env_val:
+                    try:
+                        auto_archive_minutes = int(env_val)
+                    except ValueError:
+                        pass
+
+            if auto_archive_minutes and auto_archive_minutes > 0:
+                threshold_time = now - timedelta(minutes=auto_archive_minutes)
+                overdue_done_tasks = (
+                    db.query(Task)
+                    .filter(
+                        Task.status == "done",
+                        Task.archived.is_(False),
+                        Task.completed_at.isnot(None),
+                        Task.completed_at <= threshold_time,
+                    )
+                    .all()
+                )
+                for task in overdue_done_tasks:
+                    task.archived = True
 
             db.commit()
         except Exception:
@@ -127,6 +160,50 @@ async def verify_page_password(payload: PasswordVerify):
         return {"valid": True}
     return {"valid": payload.password == page_password}
 
+
+@app.get("/api/settings")
+async def get_settings():
+    """Return current app settings."""
+    return _load_settings()
+
+
+@app.patch("/api/settings")
+async def update_settings(payload: SettingsUpdate):
+    """Persist app settings to disk."""
+    current = _load_settings()
+    if payload.auto_archive_minutes is not None:
+        current["auto_archive_minutes"] = payload.auto_archive_minutes
+    elif "auto_archive_minutes" in payload.model_fields_set:
+        current["auto_archive_minutes"] = None
+    _save_settings(current)
+    return current
+
+
+@app.post("/api/tasks/archive-done")
+async def archive_all_done():
+    """Archive every done (completed) task immediately."""
+    from .database import SessionLocal
+    from .models.task import Task as TaskModel
+
+    db = SessionLocal()
+    try:
+        done_tasks = (
+            db.query(TaskModel)
+            .filter(TaskModel.status == "done", TaskModel.archived.is_(False))
+            .all()
+        )
+        count = len(done_tasks)
+        for t in done_tasks:
+            t.archived = True
+        db.commit()
+        return {"archived": count}
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
 app.include_router(tasks_router, prefix="/api")
 
 
@@ -135,3 +212,4 @@ app.include_router(tasks_router, prefix="/api")
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "service": "taskflow"}
+

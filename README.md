@@ -124,12 +124,32 @@ web_app/
 ### Auto-arquivamento de Tarefas Concluídas (Opcional)
 
 - Permite configurar o arquivamento automático de tarefas no status `done` após um período de tempo.
-- Defina a variável de ambiente `AUTO_ARCHIVE_AFTER_MINUTES` com o tempo limite (em minutos).
+- Pode ser configurado através da variável de ambiente `AUTO_ARCHIVE_AFTER_MINUTES` ou diretamente na interface do usuário através do **Menu de Configurações**.
 - Uma tarefa executada em segundo plano no servidor verifica as tarefas concluídas a cada 60 segundos e as arquiva caso tenham atingido o tempo limite.
 
-### Autocomplete de Tags
+### Menu de Configurações
 
-- Ao cadastrar ou editar tags no `CreateTaskModal` e `TaskDetailModal`, um autocomplete sugere tags já utilizadas anteriormente no quadro, facilitando a padronização das tags.
+- Acessível no menu lateral (Sidebar) através de um ícone de engrenagem.
+- Permite configurar e ajustar o período de auto-arquivamento em tempo de execução sem reiniciar a aplicação. O valor é persistido em `/app/data/settings.json`.
+- Contém um botão para **Arquivar Todas as Concluídas** imediatamente.
+
+### Seletor de Tags com Auto-complete Customizado
+
+- A caixa de seleção de tags foi remodelada para um seletor moderno baseado em chips.
+- Exibe sugestões inteligentes de tags já cadastradas ao digitar, permitindo adicioná-las clicando ou apertando Enter.
+- As tags são exibidas como chips elegantes que podem ser removidos clicando no botão "X" interno do chip.
+
+### Ordenação Inteligente por Prioridade e Prazo
+
+- Tanto o Quadro Kanban quanto a Listagem agora ordenam as tarefas automaticamente.
+- Critério de ordenação: maior Prioridade no topo (`high` > `normal` > `low`), e em caso de empate, prazo de entrega mais próximo (`due_date` ascendente). Tarefas sem prazo de entrega vão para o final dentro de sua prioridade.
+
+### Datas com Horário Opcional
+
+- Ao criar ou editar uma tarefa, definir o horário para a data de **Início** é opcional.
+- Se o horário não for definido explicitamente, os seguintes padrões inteligentes são aplicados automaticamente:
+  - **Início**: `09:00` do dia selecionado.
+  - **Entrega** (opcional no modal): `23:59` do dia selecionado.
 
 ### Responsividade (Mobile e Tablets)
 
@@ -137,6 +157,7 @@ web_app/
 - O menu lateral (Sidebar) vira um menu deslizante (sliding drawer) acionado por um botão Hamburger.
 - As colunas do Kanban se empilham verticalmente em telas pequenas.
 - Os modais de tarefas passam a ocupar tela cheia com rolagem interna para melhorar a usabilidade em celulares.
+- Permite alterar o status da tarefa diretamente por botões rápidos de ação no Card ou no modal de Detalhes, facilitando o uso em telas sensíveis ao toque.
 
 ### Arquivamento Manual de Tarefas
 
@@ -168,5 +189,9 @@ web_app/
 | `GET` | `/api/tasks/board` | Board agrupado por status |
 | `GET` | `/api/tasks/review` | Resumo diário |
 | `POST` | `/api/tasks/trigger-temporal` | Forçar re-avaliação temporal |
+| `POST` | `/api/tasks/archive-done` | Arquivar todas as tarefas concluídas imediatamente |
+| `GET` | `/api/settings` | Retorna as configurações atuais do app |
+| `PATCH` | `/api/settings` | Atualiza as configurações do app (auto-arquivamento) |
 | `GET` | `/api/auth/config` | Retorna se a senha é exigida no painel |
 | `POST` | `/api/auth/verify` | Valida a senha enviada pelo usuário |
+

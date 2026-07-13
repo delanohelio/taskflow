@@ -21,6 +21,7 @@ import * as api from "@/services/api";
 import PriorityIndicator from "@/components/ui/PriorityIndicator";
 import TagBadge from "@/components/ui/TagBadge";
 import ProgressBar from "@/components/ui/ProgressBar";
+import TagInput from "@/components/ui/TagInput";
 
 interface TaskDetailModalProps {
   task: Task;
@@ -45,11 +46,23 @@ export default function TaskDetailModal({
   const [editDescription, setEditDescription] = useState(task.description ?? "");
   const [editPriority, setEditPriority] = useState<Priority>(task.priority);
   const [editDueDate, setEditDueDate] = useState(task.due_date ?? "");
-  const [editStartDatetime, setEditStartDatetime] = useState(
-    task.start_datetime ? task.start_datetime.slice(0, 16) : ""
+  // Split start datetime into date + time + toggle
+  const [editStartDate, setEditStartDate] = useState(
+    task.start_datetime ? task.start_datetime.slice(0, 10) : ""
   );
-  const [editTagInput, setEditTagInput] = useState("");
+  const [editStartTime, setEditStartTime] = useState(
+    task.start_datetime ? task.start_datetime.slice(11, 16) : ""
+  );
+  const [editStartTimeEnabled, setEditStartTimeEnabled] = useState(
+    !!task.start_datetime && task.start_datetime.length >= 16
+  );
   const [editTags, setEditTags] = useState<string[]>(task.tag_list);
+
+  function buildEditStartDatetime(): string | null {
+    if (!editStartDate) return null;
+    const time = editStartTimeEnabled && editStartTime ? editStartTime : "09:00";
+    return `${editStartDate}T${time}`;
+  }
 
   // Subtask creation
   const [showSubtaskInput, setShowSubtaskInput] = useState(false);
@@ -75,7 +88,9 @@ export default function TaskDetailModal({
       setEditDescription(task.description ?? "");
       setEditPriority(task.priority);
       setEditDueDate(task.due_date ?? "");
-      setEditStartDatetime(task.start_datetime ? task.start_datetime.slice(0, 16) : "");
+      setEditStartDate(task.start_datetime ? task.start_datetime.slice(0, 10) : "");
+      setEditStartTime(task.start_datetime ? task.start_datetime.slice(11, 16) : "");
+      setEditStartTimeEnabled(!!task.start_datetime && task.start_datetime.length >= 16);
       setEditTags(task.tag_list);
     }
   }, [task, isEditing]);
@@ -88,7 +103,7 @@ export default function TaskDetailModal({
       description: editDescription.trim() || null,
       priority: editPriority,
       due_date: editDueDate || null,
-      start_datetime: editStartDatetime || null,
+      start_datetime: buildEditStartDatetime(),
       tags: editTags,
     });
     await refreshTask();
@@ -152,15 +167,6 @@ export default function TaskDetailModal({
     await refreshTask();
   }
 
-  // ── Tag helpers ────────────────────────────────────────────────────
-
-  function addEditTag() {
-    const trimmed = editTagInput.trim().toLowerCase();
-    if (trimmed && !editTags.includes(trimmed)) {
-      setEditTags([...editTags, trimmed]);
-    }
-    setEditTagInput("");
-  }
 
   return (
     <div
@@ -388,16 +394,36 @@ export default function TaskDetailModal({
               {/* Dates Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="edit-start" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-surface-500">
+                  <label htmlFor="edit-start-date" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-surface-500">
                     Início (agendamento)
                   </label>
                   <input
-                    id="edit-start"
-                    type="datetime-local"
-                    value={editStartDatetime}
-                    onChange={(e) => setEditStartDatetime(e.target.value)}
+                    id="edit-start-date"
+                    type="date"
+                    value={editStartDate}
+                    onChange={(e) => setEditStartDate(e.target.value)}
                     className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                   />
+                  {editStartDate && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="edit-start-time-enabled"
+                        checked={editStartTimeEnabled}
+                        onChange={(e) => setEditStartTimeEnabled(e.target.checked)}
+                        className="rounded border-surface-300 text-brand-600"
+                      />
+                      <label htmlFor="edit-start-time-enabled" className="text-xs text-surface-600">Definir horário</label>
+                      {editStartTimeEnabled && (
+                        <input
+                          type="time"
+                          value={editStartTime || "09:00"}
+                          onChange={(e) => setEditStartTime(e.target.value)}
+                          className="flex-1 rounded-lg border border-surface-300 bg-white px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="edit-due" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-surface-500">
@@ -415,57 +441,13 @@ export default function TaskDetailModal({
 
               {/* Tags */}
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-surface-500">
-                  Tags
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    list="available-tags-detail-list"
-                    type="text"
-                    value={editTagInput}
-                    onChange={(e) => setEditTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addEditTag();
-                      }
-                    }}
-                    placeholder="Adicionar tag..."
-                    className="flex-1 rounded-lg border border-surface-300 bg-white px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
-                  />
-                  <datalist id="available-tags-detail-list">
-                    {availableTags.map((tag) => (
-                      <option key={tag} value={tag} />
-                    ))}
-                  </datalist>
-                  <button
-                    type="button"
-                    onClick={addEditTag}
-                    className="rounded-lg bg-white px-2 py-1.5 text-surface-500 hover:bg-surface-200"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
-                {editTags.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {editTags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700"
-                      >
-                        {tag}
-                        <button
-                          type="button"
-                          onClick={() => setEditTags(editTags.filter((t) => t !== tag))}
-                          className="ml-0.5 rounded-full p-0.5 hover:bg-brand-200"
-                          aria-label={`Remover tag ${tag}`}
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-surface-500">Tags</label>
+                <TagInput
+                  tags={editTags}
+                  setTags={setEditTags}
+                  availableTags={availableTags}
+                  placeholder="Adicionar tags..."
+                />
               </div>
 
               {/* Save / Cancel */}
@@ -478,7 +460,9 @@ export default function TaskDetailModal({
                     setEditDescription(task.description ?? "");
                     setEditPriority(task.priority);
                     setEditDueDate(task.due_date ?? "");
-                    setEditStartDatetime(task.start_datetime ? task.start_datetime.slice(0, 16) : "");
+                    setEditStartDate(task.start_datetime ? task.start_datetime.slice(0, 10) : "");
+                    setEditStartTime(task.start_datetime ? task.start_datetime.slice(11, 16) : "");
+                    setEditStartTimeEnabled(!!task.start_datetime && task.start_datetime.length >= 16);
                     setEditTags(task.tag_list);
                   }}
                   className="rounded-lg px-3 py-1.5 text-sm text-surface-500 hover:bg-surface-200"

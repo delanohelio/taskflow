@@ -1,9 +1,10 @@
 /** Modal for creating a new task. */
 
 import { useState, type FormEvent } from "react";
-import { X, Plus, CalendarPlus, Tag } from "lucide-react";
+import { X, CalendarPlus } from "lucide-react";
 import type { CreateTaskPayload, Priority } from "@/types/task";
 import { PRIORITY_CONFIG } from "@/utils/constants";
+import TagInput from "@/components/ui/TagInput";
 
 interface CreateTaskModalProps {
   parentId?: number | null;
@@ -20,23 +21,26 @@ export default function CreateTaskModal({
 }: CreateTaskModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [startDatetime, setStartDatetime] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [startTimeEnabled, setStartTimeEnabled] = useState(false);
   const [dueDate, setDueDate] = useState("");
+  const [dueTime, setDueTime] = useState("");
+  const [dueTimeEnabled, setDueTimeEnabled] = useState(false);
   const [priority, setPriority] = useState<Priority>("normal");
-  const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  function addTag() {
-    const trimmed = tagInput.trim().toLowerCase();
-    if (trimmed && !tags.includes(trimmed)) {
-      setTags([...tags, trimmed]);
-    }
-    setTagInput("");
+  function buildStartDatetime(): string | null {
+    if (!startDate) return null;
+    const time = startTimeEnabled && startTime ? startTime : "09:00";
+    return `${startDate}T${time}`;
   }
 
-  function removeTag(tag: string) {
-    setTags(tags.filter((t) => t !== tag));
+  function buildDueDatetime(): string | null {
+    if (!dueDate) return null;
+    // due_date stays as date-only for the API; time is informational
+    return dueDate;
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -45,11 +49,12 @@ export default function CreateTaskModal({
 
     setSubmitting(true);
     try {
+      const startDatetime = buildStartDatetime();
       await onSubmit({
         title: title.trim(),
         description: description.trim() || null,
-        start_datetime: startDatetime || null,
-        due_date: dueDate || null,
+        start_datetime: startDatetime,
+        due_date: buildDueDatetime(),
         priority,
         tags,
         parent_id: parentId,
@@ -119,17 +124,37 @@ export default function CreateTaskModal({
           {/* Date fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label htmlFor="task-start" className="mb-1 flex items-center gap-1.5 text-sm font-medium text-surface-700">
+              <label htmlFor="task-start-date" className="mb-1 flex items-center gap-1.5 text-sm font-medium text-surface-700">
                 <CalendarPlus className="h-3.5 w-3.5" />
                 Início (agendamento)
               </label>
               <input
-                id="task-start"
-                type="datetime-local"
-                value={startDatetime}
-                onChange={(e) => setStartDatetime(e.target.value)}
+                id="task-start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
                 className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               />
+              {startDate && (
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="start-time-enabled"
+                    checked={startTimeEnabled}
+                    onChange={(e) => setStartTimeEnabled(e.target.checked)}
+                    className="rounded border-surface-300 text-brand-600"
+                  />
+                  <label htmlFor="start-time-enabled" className="text-xs text-surface-600">Definir horário</label>
+                  {startTimeEnabled && (
+                    <input
+                      type="time"
+                      value={startTime || "09:00"}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="flex-1 rounded-lg border border-surface-300 bg-white px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
+                    />
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <label htmlFor="task-due" className="mb-1 flex items-center gap-1.5 text-sm font-medium text-surface-700">
@@ -143,6 +168,26 @@ export default function CreateTaskModal({
                 onChange={(e) => setDueDate(e.target.value)}
                 className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               />
+              {dueDate && (
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="due-time-enabled"
+                    checked={dueTimeEnabled}
+                    onChange={(e) => setDueTimeEnabled(e.target.checked)}
+                    className="rounded border-surface-300 text-brand-600"
+                  />
+                  <label htmlFor="due-time-enabled" className="text-xs text-surface-600">Definir horário</label>
+                  {dueTimeEnabled && (
+                    <input
+                      type="time"
+                      value={dueTime || "23:59"}
+                      onChange={(e) => setDueTime(e.target.value)}
+                      className="flex-1 rounded-lg border border-surface-300 bg-white px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
+                    />
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -171,66 +216,20 @@ export default function CreateTaskModal({
 
           {/* Tags */}
           <div>
-            <label htmlFor="task-tag-input" className="mb-1 flex items-center gap-1.5 text-sm font-medium text-surface-700">
-              <Tag className="h-3.5 w-3.5" />
-              Tags
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="task-tag-input"
-                list="available-tags-list"
-                type="text"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addTag();
-                  }
-                }}
-                placeholder="Digite e pressione Enter"
-                className="flex-1 rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              />
-              <datalist id="available-tags-list">
-                {availableTags.map((tag) => (
-                  <option key={tag} value={tag} />
-                ))}
-              </datalist>
-              <button
-                type="button"
-                onClick={addTag}
-                className="rounded-lg bg-surface-100 px-3 py-2 text-sm font-medium text-surface-600 transition-colors hover:bg-surface-200"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            </div>
-            {tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2.5 py-1 text-xs font-medium text-brand-700"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-brand-200"
-                      aria-label={`Remover tag ${tag}`}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
+            <label className="mb-1 block text-sm font-medium text-surface-700">Tags</label>
+            <TagInput
+              tags={tags}
+              setTags={setTags}
+              availableTags={availableTags}
+              placeholder="Adicionar tags..."
+            />
           </div>
 
           {/* Temporal hint */}
-          {startDatetime && new Date(startDatetime) > new Date() && (
+          {startDate && new Date(`${startDate}T${startTimeEnabled && startTime ? startTime : "09:00"}`) > new Date() && (
             <div className="rounded-lg bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
               ⏳ Esta tarefa ficará em <strong>Stand-by</strong> até{" "}
-              {new Date(startDatetime).toLocaleString("pt-BR")}
+              {new Date(`${startDate}T${startTimeEnabled && startTime ? startTime : "09:00"}`).toLocaleString("pt-BR")}
             </div>
           )}
 

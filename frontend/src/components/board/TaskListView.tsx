@@ -3,6 +3,7 @@ import { Search, Filter, Calendar, Clock, ArrowUpDown, AlertCircle, Edit3 } from
 import type { Task, Status, Priority, UpdateTaskPayload } from "@/types/task";
 import { PRIORITY_CONFIG } from "@/utils/constants";
 import { formatDueDate, formatStartDateTime } from "@/utils/helpers";
+import { sortTasks } from "@/utils/sortTasks";
 import PriorityIndicator from "@/components/ui/PriorityIndicator";
 import TagBadge from "@/components/ui/TagBadge";
 import ProgressBar from "@/components/ui/ProgressBar";
@@ -90,9 +91,8 @@ export default function TaskListView({ tasks, onTaskClick, onUpdate }: TaskListV
         const dateB = b.due_date ? new Date(b.due_date).getTime() : 0;
         comparison = dateA - dateB;
       } else {
-        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-        comparison = dateA - dateB;
+        // Default: smart sort by priority + due_date
+        return sortTasks([a, b])[0] === a ? -1 : 1;
       }
 
       return sortOrder === "asc" ? comparison : -comparison;

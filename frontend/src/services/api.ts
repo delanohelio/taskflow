@@ -85,3 +85,25 @@ export async function fetchTasks(filters?: {
   const { data } = await api.get<Task[]>("/tasks", { params: filters });
   return data;
 }
+
+// ── Settings ─────────────────────────────────────────────────────────────
+
+export interface AppSettings {
+  auto_archive_minutes: number | null;
+}
+
+export async function fetchSettings(): Promise<AppSettings> {
+  const { data } = await api.get<AppSettings>("/settings");
+  return data;
+}
+
+export async function updateSettings(payload: Partial<AppSettings>): Promise<AppSettings> {
+  const { data } = await api.patch<AppSettings>("/settings", payload);
+  return data;
+}
+
+export async function archiveAllDone(): Promise<{ archived: number }> {
+  const { data } = await api.post<{ archived: number }>("/tasks/archive-done");
+  return data;
+}
+

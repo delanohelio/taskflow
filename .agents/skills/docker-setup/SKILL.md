@@ -170,10 +170,12 @@ Para configurar o tempo limite de auto-arquivamento:
    ```bash
    AUTO_ARCHIVE_AFTER_MINUTES=60 docker compose up -d
    ```
-2. O servidor em segundo plano verificará as tarefas concluídas a cada 60 segundos e moverá automaticamente para a seção de **Arquivadas** qualquer tarefa concluída há mais de 60 minutos (no exemplo).
-3. Se a variável não for definida ou for definida como `0`, o auto-arquivamento permanecerá desativado.
+2. Alternativamente, você pode configurar e ajustar esse período diretamente na interface do usuário através do **Menu de Configurações** no frontend. O valor será gravado no arquivo `/app/data/settings.json` (que é persistido no volume local `./data` junto com o banco de dados).
+3. O servidor em segundo plano verificará as tarefas concluídas a cada 60 segundos e moverá automaticamente para a seção de **Arquivadas** qualquer tarefa concluída há mais de X minutos.
+4. Se a variável não for definida no `.env` e não for configurada no menu lateral, o auto-arquivamento permanecerá desativado.
 
 ---
+
 
 ## 7. Resolução de Problemas Comuns
 
