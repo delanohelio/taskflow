@@ -16,6 +16,7 @@ import TaskListView from "@/components/board/TaskListView";
 import StandbyScreen from "@/components/board/StandbyScreen";
 import ArchivedScreen from "@/components/board/ArchivedScreen";
 import SettingsModal from "@/components/modals/SettingsModal";
+import CalendarView from "@/components/board/CalendarView";
 
 export default function App() {
   const {
@@ -36,7 +37,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-  const [activeScreen, setActiveScreen] = useState<"board" | "list" | "standby" | "archived">("board");
+  const [activeScreen, setActiveScreen] = useState<"board" | "list" | "calendar" | "standby" | "archived">("board");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -211,6 +212,12 @@ export default function App() {
               tasks={filteredActiveTasks}
               onTaskClick={(task) => setSelectedTask(task)}
               onUpdate={updateTask}
+            />
+          )}
+          {activeScreen === "calendar" && (
+            <CalendarView
+              tasks={filteredActiveTasks}
+              onTaskClick={(task) => setSelectedTask(task)}
             />
           )}
           {activeScreen === "standby" && (

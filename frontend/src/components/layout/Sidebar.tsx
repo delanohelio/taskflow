@@ -11,6 +11,7 @@ import {
   Archive,
   LogOut,
   Settings,
+  Calendar,
 } from "lucide-react";
 import type { BoardData, Task } from "@/types/task";
 import { formatStartDateTime, formatDueDate } from "@/utils/helpers";
@@ -21,8 +22,8 @@ interface SidebarProps {
   onCreateTask: () => void;
   selectedTags: string[];
   onToggleTag: (tag: string) => void;
-  activeScreen: "board" | "list" | "standby" | "archived";
-  onChangeScreen: (screen: "board" | "list" | "standby" | "archived") => void;
+  activeScreen: "board" | "list" | "calendar" | "standby" | "archived";
+  onChangeScreen: (screen: "board" | "list" | "calendar" | "standby" | "archived") => void;
   archivedCount: number;
   onTaskClick: (task: Task) => void;
   isOpen?: boolean;
@@ -121,6 +122,16 @@ export default function Sidebar({
           >
             <List className="h-4 w-4" />
             <span>Listagem</span>
+          </button>
+
+          <button
+            onClick={() => onChangeScreen("calendar")}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-surface-100 ${
+              activeScreen === "calendar" ? "sidebar-item-active" : "text-surface-600"
+            }`}
+          >
+            <Calendar className="h-4 w-4" />
+            <span>Calendário</span>
           </button>
 
           <button

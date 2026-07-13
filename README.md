@@ -139,6 +139,14 @@ web_app/
 - Exibe sugestões inteligentes de tags já cadastradas ao digitar, permitindo adicioná-las clicando ou apertando Enter.
 - As tags são exibidas como chips elegantes que podem ser removidos clicando no botão "X" interno do chip.
 
+### Visão de Calendário Interativa
+
+- Nova visão disponível no menu lateral que organiza todas as tarefas datadas (com início ou entrega agendados) em uma grade mensal.
+- Permite navegar facilmente entre meses anteriores/posteriores e voltar para o dia atual ("Hoje").
+- Cada dia no calendário exibe mini cards contendo o horário, título da tarefa e indicação visual de prioridade.
+- Totalmente integrado: clicar em uma tarefa abre o modal completo de detalhes e edição.
+- Responsividade mobile: Em telas pequenas, a grade exibe pontos coloridos de atividades, abrindo uma lista detalhada expansível logo abaixo do calendário ao tocar em qualquer dia.
+
 ### Ordenação Inteligente por Prioridade e Prazo
 
 - Tanto o Quadro Kanban quanto a Listagem agora ordenam as tarefas automaticamente.
