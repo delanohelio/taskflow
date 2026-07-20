@@ -1,12 +1,12 @@
 /** Settings modal for configuring app behavior. */
 
 import { useEffect, useState } from "react";
-import { X, Settings, Archive, Clock, Check, AlertCircle } from "lucide-react";
+import { X, Settings, Archive, Clock, Check, AlertCircle, Download, Upload, Database } from "lucide-react";
 import * as api from "@/services/api";
 
 interface SettingsModalProps {
   onClose: () => void;
-  onArchiveDone: () => void; // refresh board after archiving
+  onArchiveDone: () => void; // refresh board after archiving/importing
 }
 
 export default function SettingsModal({ onClose, onArchiveDone }: SettingsModalProps) {
@@ -16,6 +16,12 @@ export default function SettingsModal({ onClose, onArchiveDone }: SettingsModalP
   const [archiving, setArchiving] = useState(false);
   const [savedOk, setSavedOk] = useState(false);
   const [archivedCount, setArchivedCount] = useState<number | null>(null);
+
+  // Backup & Restore states
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   useEffect(() => {
     api.fetchSettings().then((s) => {
@@ -50,12 +56,55 @@ export default function SettingsModal({ onClose, onArchiveDone }: SettingsModalP
     }
   }
 
+  async function handleExportBackup() {
+    setExporting(true);
+    setImportSuccess(null);
+    setImportError(null);
+    try {
+      await api.exportBackup();
+    } catch {
+      setImportError("Erro ao exportar o arquivo de backup.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!window.confirm("Importar um backup substituirá TODAS as tarefas e configurações atuais. Deseja continuar?")) {
+      e.target.value = "";
+      return;
+    }
+
+    setImporting(true);
+    setImportSuccess(null);
+    setImportError(null);
+
+    try {
+      const text = await file.text();
+      const jsonData = JSON.parse(text);
+      const res = await api.importBackup(jsonData);
+      setImportSuccess(`${res.imported_count} tarefas restauradas com sucesso!`);
+      onArchiveDone();
+      const newSettings = await api.fetchSettings();
+      setAutoArchiveMinutes(newSettings.auto_archive_minutes != null ? String(newSettings.auto_archive_minutes) : "");
+    } catch (err: any) {
+      const msg = err.response?.data?.detail || err.message || "Erro ao processar arquivo de backup.";
+      setImportError(`Falha na importação: ${msg}`);
+    } finally {
+      setImporting(false);
+      e.target.value = "";
+    }
+  }
+
   return (
     <div
       className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="modal-content w-full max-w-md rounded-2xl border border-surface-200 bg-white p-6 shadow-2xl">
+      <div className="modal-content w-full max-w-md rounded-2xl border border-surface-200 bg-white p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -131,6 +180,57 @@ export default function SettingsModal({ onClose, onArchiveDone }: SettingsModalP
 
             <hr className="border-surface-100" />
 
+            {/* Backup & Restore */}
+            <div className="rounded-xl border border-surface-200 bg-surface-50/50 p-4">
+              <div className="mb-3 flex items-start gap-3">
+                <Database className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-600" />
+                <div>
+                  <h3 className="text-sm font-semibold text-surface-900">Backup e Restauração</h3>
+                  <p className="mt-0.5 text-xs text-surface-500">
+                    Exporte suas tarefas e configurações para um arquivo JSON ou restaure a partir de um backup.
+                  </p>
+                </div>
+              </div>
+
+              {importSuccess && (
+                <div className="mb-3 rounded-lg bg-emerald-100 px-3 py-2 text-xs font-medium text-emerald-800">
+                  ✓ {importSuccess}
+                </div>
+              )}
+
+              {importError && (
+                <div className="mb-3 rounded-lg bg-red-100 px-3 py-2 text-xs font-medium text-red-800">
+                  ⚠ {importError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportBackup}
+                  disabled={exporting}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-surface-300 bg-white px-3 py-2 text-sm font-semibold text-surface-700 shadow-2xs transition-all hover:bg-surface-100 disabled:opacity-60"
+                >
+                  <Download className="h-4 w-4 text-brand-600" />
+                  {exporting ? "Salvando..." : "Salvar Backup"}
+                </button>
+
+                <label className="flex items-center justify-center gap-2 rounded-xl border border-surface-300 bg-white px-3 py-2 text-sm font-semibold text-surface-700 shadow-2xs transition-all hover:bg-surface-100 cursor-pointer disabled:opacity-60">
+                  <Upload className="h-4 w-4 text-brand-600" />
+                  <span>{importing ? "Importando..." : "Importar Backup"}</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleImportFile}
+                    disabled={importing}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <hr className="border-surface-100" />
+
             {/* Archive all done */}
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
               <div className="mb-3 flex items-start gap-3">
@@ -163,3 +263,4 @@ export default function SettingsModal({ onClose, onArchiveDone }: SettingsModalP
     </div>
   );
 }
+

@@ -127,11 +127,12 @@ web_app/
 - Pode ser configurado através da variável de ambiente `AUTO_ARCHIVE_AFTER_MINUTES` ou diretamente na interface do usuário através do **Menu de Configurações**.
 - Uma tarefa executada em segundo plano no servidor verifica as tarefas concluídas a cada 60 segundos e as arquiva caso tenham atingido o tempo limite.
 
-### Menu de Configurações
+### Menu de Configurações e Backup de Dados
 
 - Acessível no menu lateral (Sidebar) através de um ícone de engrenagem.
 - Permite configurar e ajustar o período de auto-arquivamento em tempo de execução sem reiniciar a aplicação. O valor é persistido em `/app/data/settings.json`.
 - Contém um botão para **Arquivar Todas as Concluídas** imediatamente.
+- **Backup & Restauração**: Possibilita salvar (exportar) um arquivo `.json` com o estado completo de todas as tarefas e configurações, além de importar um backup existente para restaurar a base de dados.
 
 ### Seletor de Tags com Auto-complete Customizado
 
@@ -198,8 +199,11 @@ web_app/
 | `GET` | `/api/tasks/review` | Resumo diário |
 | `POST` | `/api/tasks/trigger-temporal` | Forçar re-avaliação temporal |
 | `POST` | `/api/tasks/archive-done` | Arquivar todas as tarefas concluídas imediatamente |
+| `GET` | `/api/backup/export` | Exportar backup completo em JSON |
+| `POST` | `/api/backup/import` | Importar/restaurar backup completo em JSON |
 | `GET` | `/api/settings` | Retorna as configurações atuais do app |
 | `PATCH` | `/api/settings` | Atualiza as configurações do app (auto-arquivamento) |
 | `GET` | `/api/auth/config` | Retorna se a senha é exigida no painel |
 | `POST` | `/api/auth/verify` | Valida a senha enviada pelo usuário |
+
 

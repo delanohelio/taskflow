@@ -107,3 +107,24 @@ export async function archiveAllDone(): Promise<{ archived: number }> {
   return data;
 }
 
+export async function exportBackup(): Promise<void> {
+  const { data } = await api.get("/backup/export");
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const today = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `taskflow-backup-${today}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+export async function importBackup(backupData: any): Promise<{ status: string; imported_count: number }> {
+  const { data } = await api.post<{ status: string; imported_count: number }>("/backup/import", backupData);
+  return data;
+}
+
+

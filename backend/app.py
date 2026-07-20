@@ -204,6 +204,124 @@ async def archive_all_done():
         db.close()
 
 
+@app.get("/api/backup/export")
+async def export_backup():
+    """Export all tasks and settings as a JSON object."""
+    from datetime import datetime, date
+    from .database import SessionLocal
+    from .models.task import Task as TaskModel
+
+    db = SessionLocal()
+    try:
+        tasks = db.query(TaskModel).all()
+        tasks_data = []
+        for t in tasks:
+            tasks_data.append({
+                "id": t.id,
+                "title": t.title,
+                "description": t.description,
+                "start_datetime": t.start_datetime.isoformat() if t.start_datetime else None,
+                "due_date": t.due_date.isoformat() if t.due_date else None,
+                "status": t.status,
+                "priority": t.priority,
+                "archived": t.archived,
+                "tags": t.tags,
+                "parent_id": t.parent_id,
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+                "updated_at": t.updated_at.isoformat() if t.updated_at else None,
+                "completed_at": t.completed_at.isoformat() if t.completed_at else None,
+            })
+
+        settings_data = _load_settings()
+        return {
+            "version": "1.0",
+            "exported_at": datetime.now().isoformat(),
+            "settings": settings_data,
+            "tasks": tasks_data,
+        }
+    finally:
+        db.close()
+
+
+@app.post("/api/backup/import")
+async def import_backup(request: Request):
+    """Import tasks and settings from a JSON backup payload."""
+    from datetime import datetime, date
+    from .database import SessionLocal
+    from .models.task import Task as TaskModel
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Payload de JSON inválido.")
+
+    if isinstance(body, dict):
+        tasks_list = body.get("tasks", [])
+        settings_data = body.get("settings")
+    elif isinstance(body, list):
+        tasks_list = body
+        settings_data = None
+    else:
+        raise HTTPException(status_code=400, detail="Formato de backup não suportado.")
+
+    db = SessionLocal()
+    try:
+        # Delete existing tasks
+        db.query(TaskModel).delete()
+        db.commit()
+
+        id_map = {}  # old_id -> new Task object
+
+        # Pass 1: create all tasks without parent_id
+        for item in tasks_list:
+            old_id = item.get("id")
+            start_dt = datetime.fromisoformat(item["start_datetime"]) if item.get("start_datetime") else None
+            due_d = date.fromisoformat(item["due_date"]) if item.get("due_date") else None
+            created_at = datetime.fromisoformat(item["created_at"]) if item.get("created_at") else datetime.now()
+            updated_at = datetime.fromisoformat(item["updated_at"]) if item.get("updated_at") else datetime.now()
+            completed_at = datetime.fromisoformat(item["completed_at"]) if item.get("completed_at") else None
+
+            task = TaskModel(
+                title=item.get("title", "Sem título"),
+                description=item.get("description"),
+                start_datetime=start_dt,
+                due_date=due_d,
+                status=item.get("status", "todo"),
+                priority=item.get("priority", "normal"),
+                archived=bool(item.get("archived", False)),
+                tags=item.get("tags"),
+                parent_id=None,
+                created_at=created_at,
+                updated_at=updated_at,
+                completed_at=completed_at,
+            )
+            db.add(task)
+            db.flush()  # assign new id
+            if old_id is not None:
+                id_map[old_id] = task
+
+        # Pass 2: map parent_id references
+        for item in tasks_list:
+            old_id = item.get("id")
+            old_parent_id = item.get("parent_id")
+            if old_id in id_map and old_parent_id in id_map:
+                id_map[old_id].parent_id = id_map[old_parent_id].id
+
+        db.commit()
+
+        # Update settings if included
+        if settings_data and isinstance(settings_data, dict):
+            _save_settings(settings_data)
+
+        return {"status": "ok", "imported_count": len(tasks_list)}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Erro ao importar backup: {str(e)}")
+    finally:
+        db.close()
+
+
+
 app.include_router(tasks_router, prefix="/api")
 
 
