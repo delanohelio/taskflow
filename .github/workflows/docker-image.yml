@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,16 +13,23 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [backend, frontend]
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # Prepara o nome do repositório em minúsculo e extrai a tag
+    # Prepara o nome do repositório em minúsculo e extrai a tag ou fallback
     - name: Get the version and repository name
       id: prep
       run: |
-        echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        else
+          echo "VERSION=latest" >> $GITHUB_ENV
+        fi
         echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
     # Configura o QEMU (Necessário para simular a arquitetura ARM da Orange Pi)
@@ -41,14 +49,16 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     # Constrói a imagem para PC (amd64) e para a Orange Pi (arm64) simultaneamente
-    - name: Build and Push Docker image
+    - name: Build and Push Docker image (${{ matrix.service }})
       uses: docker/build-push-action@v6
       with:
-        context: .
-        file: ./Dockerfile
+        context: ./${{ matrix.service }}
+        file: ./${{ matrix.service }}/Dockerfile
         push: true
         # Define as duas plataformas. A linux/arm64 é a da sua Orange Pi.
         platforms: linux/amd64,linux/arm64
         tags: |
-          ghcr.io/${{ env.REPO_LOWER }}:latest
-          ghcr.io/${{ env.REPO_LOWER }}:${{ env.VERSION }}
+          ghcr.io/${{ env.REPO_LOWER }}/${{ matrix.service }}:latest
+          ghcr.io/${{ env.REPO_LOWER }}/${{ matrix.service }}:${{ env.VERSION }}
+          ghcr.io/${{ env.REPO_LOWER }}-${{ matrix.service }}:latest
+          ghcr.io/${{ env.REPO_LOWER }}-${{ matrix.service }}:${{ env.VERSION }}
