@@ -56,6 +56,32 @@ class Task(Base):
         default=None,
     )
 
+    # ── Ownership & Sharing ───────────────────────────────────────────
+    owner_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+    )
+
+    owner: Mapped[Optional["User"]] = relationship(
+        "User",
+        foreign_keys=[owner_id],
+        lazy="selectin",
+    )
+
+    shares: Mapped[list["TaskShare"]] = relationship(
+        "TaskShare",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    assignees: Mapped[list["User"]] = relationship(
+        "User",
+        secondary="subtask_assignees",
+        lazy="selectin",
+    )
+
     parent: Mapped[Optional["Task"]] = relationship(
         back_populates="children",
         remote_side="Task.id",

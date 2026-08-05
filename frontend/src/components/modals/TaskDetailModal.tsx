@@ -1,4 +1,4 @@
-/** Modal showing task details, editing, and subtask management. */
+/** Modal showing task details, editing, share settings, and subtask delegation. */
 
 import { useEffect, useState, type FormEvent } from "react";
 import { marked } from "marked";
@@ -13,8 +13,13 @@ import {
   Circle,
   Archive,
   Play,
+  Edit3,
+  Share2,
+  User as UserIcon,
+  UserPlus,
+  Users,
 } from "lucide-react";
-import type { Task, CreateTaskPayload, Priority, UpdateTaskPayload } from "@/types/task";
+import type { Task, CreateTaskPayload, Priority, UpdateTaskPayload, User, UserGroup } from "@/types/task";
 import { PRIORITY_CONFIG } from "@/utils/constants";
 import { formatDueDate, formatStartDateTime } from "@/utils/helpers";
 import * as api from "@/services/api";
@@ -46,7 +51,7 @@ export default function TaskDetailModal({
   const [editDescription, setEditDescription] = useState(task.description ?? "");
   const [editPriority, setEditPriority] = useState<Priority>(task.priority);
   const [editDueDate, setEditDueDate] = useState(task.due_date ?? "");
-  // Split start datetime into date + time + toggle
+
   const [editStartDate, setEditStartDate] = useState(
     task.start_datetime ? task.start_datetime.slice(0, 10) : ""
   );
@@ -58,28 +63,39 @@ export default function TaskDetailModal({
   );
   const [editTags, setEditTags] = useState<string[]>(task.tag_list);
 
+  // Subtask editing & creation
+  const [editingSubtaskId, setEditingSubtaskId] = useState<number | null>(null);
+  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
+  const [showSubtaskInput, setShowSubtaskInput] = useState(false);
+  const [subtaskTitle, setSubtaskTitle] = useState("");
+  const [addingSubtask, setAddingSubtask] = useState(false);
+
+  // Subtask delegation state
+  const [assigningSubtaskId, setAssigningSubtaskId] = useState<number | null>(null);
+
+  // Sharing Modal state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allGroups, setAllGroups] = useState<UserGroup[]>([]);
+  const [selectedShareUserIds, setSelectedShareUserIds] = useState<number[]>([]);
+  const [selectedShareGroupIds, setSelectedShareGroupIds] = useState<number[]>([]);
+  const [sharing, setSharing] = useState(false);
+
   function buildEditStartDatetime(): string | null {
     if (!editStartDate) return null;
     const time = editStartTimeEnabled && editStartTime ? editStartTime : "09:00";
     return `${editStartDate}T${time}`;
   }
 
-  // Subtask creation
-  const [showSubtaskInput, setShowSubtaskInput] = useState(false);
-  const [subtaskTitle, setSubtaskTitle] = useState("");
-  const [addingSubtask, setAddingSubtask] = useState(false);
-
-  // Refresh task from server
   const refreshTask = async () => {
     try {
       const fresh = await api.fetchTask(task.id);
       setTask(fresh);
-    } catch { /* silently fail */ }
+    } catch { /* ignore */ }
   };
 
   useEffect(() => {
     refreshTask();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -95,7 +111,17 @@ export default function TaskDetailModal({
     }
   }, [task, isEditing]);
 
-  // ── Save edits ─────────────────────────────────────────────────────
+  // Load potential share targets
+  const openShareModal = async () => {
+    try {
+      const [uList, gList] = await Promise.all([api.fetchUsers(), api.fetchUserGroups()]);
+      setAllUsers(uList);
+      setAllGroups(gList);
+      setShowShareModal(true);
+    } catch (err) {
+      console.error("Erro ao carregar lista para compartilhamento", err);
+    }
+  };
 
   async function handleSave() {
     await onUpdate(task.id, {
@@ -110,8 +136,6 @@ export default function TaskDetailModal({
     setIsEditing(false);
   }
 
-  // ── Delete ─────────────────────────────────────────────────────────
-
   async function handleDelete() {
     if (!window.confirm("Tem certeza que deseja excluir esta tarefa e todas as subtarefas?")) {
       return;
@@ -119,8 +143,6 @@ export default function TaskDetailModal({
     await onDelete(task.id);
     onClose();
   }
-
-  // ── Archive / Promote ──────────────────────────────────────────────
 
   async function handleArchiveToggle() {
     const nextVal = !task.archived;
@@ -136,8 +158,6 @@ export default function TaskDetailModal({
     await onUpdate(task.id, { status: "todo", start_datetime: null });
     await refreshTask();
   }
-
-  // ── Subtask creation ───────────────────────────────────────────────
 
   async function handleAddSubtask(e: FormEvent) {
     e.preventDefault();
@@ -159,14 +179,66 @@ export default function TaskDetailModal({
     }
   }
 
-  // ── Toggle subtask done/todo ───────────────────────────────────────
-
   async function toggleSubtask(subtask: Task) {
     const newStatus = subtask.status === "done" ? "todo" : "done";
     await api.moveTaskStatus(subtask.id, newStatus);
     await refreshTask();
   }
 
+  async function handleSaveSubtaskTitle(subtaskId: number) {
+    if (!editingSubtaskTitle.trim()) return;
+    await api.updateTask(subtaskId, { title: editingSubtaskTitle.trim() });
+    setEditingSubtaskId(null);
+    await refreshTask();
+  }
+
+  async function handleExecuteShare() {
+    setSharing(true);
+    try {
+      await api.shareTask(task.id, {
+        user_ids: selectedShareUserIds,
+        group_ids: selectedShareGroupIds,
+      });
+      setShowShareModal(false);
+      setSelectedShareUserIds([]);
+      setSelectedShareGroupIds([]);
+      await refreshTask();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Erro ao compartilhar tarefa.");
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  async function handleRevokeShare(shareId: number) {
+    try {
+      await api.revokeShare(shareId);
+      await refreshTask();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Erro ao revogar compartilhamento.");
+    }
+  }
+
+  async function handleToggleSubtaskAssignee(subtaskId: number, currentAssignees: User[], targetUser: User) {
+    const isAssigned = currentAssignees.some((a) => a.id === targetUser.id);
+    let nextAssigneeIds: number[];
+    if (isAssigned) {
+      nextAssigneeIds = currentAssignees.filter((a) => a.id !== targetUser.id).map((a) => a.id);
+    } else {
+      nextAssigneeIds = [...currentAssignees.map((a) => a.id), targetUser.id];
+    }
+    await api.setSubtaskAssignees(subtaskId, nextAssigneeIds);
+    await refreshTask();
+  }
+
+  // Participants eligible for subtask assignees = task owner + users who accepted share
+  const eligibleAssignees: User[] = [];
+  if (task.owner) eligibleAssignees.push(task.owner);
+  for (const s of task.shares) {
+    if (s.status === "accepted" && !eligibleAssignees.some((u) => u.id === s.user.id)) {
+      eligibleAssignees.push(s.user);
+    }
+  }
 
   return (
     <div
@@ -175,7 +247,7 @@ export default function TaskDetailModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal-content w-full h-full sm:h-auto sm:max-h-[85vh] sm:max-w-2xl overflow-y-auto rounded-none sm:rounded-2xl border border-surface-200 bg-white shadow-2xl">
+      <div className="modal-content w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-2xl overflow-y-auto rounded-none sm:rounded-2xl border border-surface-200 bg-white shadow-2xl">
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-surface-100 bg-white/95 px-6 py-4 backdrop-blur-sm">
           <div className="flex items-center gap-3">
@@ -199,56 +271,36 @@ export default function TaskDetailModal({
                 ? "Em Andamento"
                 : "Concluído"}
             </span>
-
-            {/* Quick status transition buttons */}
-            <div className="flex items-center gap-1.5 ml-2 border-l border-surface-200 pl-3">
-              {task.status === "todo" && (
-                <button
-                  onClick={async () => {
-                    await onUpdate(task.id, { status: "doing" });
-                    await refreshTask();
-                  }}
-                  className="rounded-lg bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer"
-                >
-                  Iniciar
-                </button>
-              )}
-              {task.status === "doing" && (
-                <>
-                  <button
-                    onClick={async () => {
-                      await onUpdate(task.id, { status: "todo" });
-                      await refreshTask();
-                    }}
-                    className="rounded-lg bg-surface-100 px-2 py-1 text-xs font-semibold text-surface-600 hover:bg-surface-200 transition-colors cursor-pointer"
-                  >
-                    Pausar
-                  </button>
-                  <button
-                    onClick={async () => {
-                      await onUpdate(task.id, { status: "done" });
-                      await refreshTask();
-                    }}
-                    className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer"
-                  >
-                    Concluir
-                  </button>
-                </>
-              )}
-              {task.status === "done" && (
-                <button
-                  onClick={async () => {
-                    await onUpdate(task.id, { status: "doing" });
-                    await refreshTask();
-                  }}
-                  className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
-                >
-                  Refazer
-                </button>
-              )}
-            </div>
           </div>
+
           <div className="flex items-center gap-1">
+            {/* Share button (only for owner) */}
+            {!task.is_shared_with_me && (
+              <button
+                onClick={openShareModal}
+                className="flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors cursor-pointer"
+                title="Compartilhar atividade"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                <span>Compartilhar</span>
+              </button>
+            )}
+
+            {/* Explicit Edit Button before Archive Button */}
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer border ${
+                isEditing
+                  ? "bg-brand-100 text-brand-800 border-brand-300"
+                  : "bg-surface-100 text-surface-700 border-surface-200 hover:bg-surface-200"
+              }`}
+              title="Editar atividade"
+            >
+              <Edit3 className="h-3.5 w-3.5" />
+              <span>{isEditing ? "Cancel Edit" : "Editar"}</span>
+            </button>
+
+            {/* Archive button */}
             <button
               onClick={handleArchiveToggle}
               className={`rounded-lg p-2 transition-colors ${
@@ -260,13 +312,18 @@ export default function TaskDetailModal({
             >
               <Archive className="h-4 w-4" />
             </button>
-            <button
-              onClick={handleDelete}
-              className="rounded-lg p-2 text-surface-400 transition-colors hover:bg-red-50 hover:text-red-500"
-              title="Excluir tarefa"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+
+            {/* Delete button (only for owner) */}
+            {!task.is_shared_with_me && (
+              <button
+                onClick={handleDelete}
+                className="rounded-lg p-2 text-surface-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                title="Excluir tarefa"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+
             <button
               onClick={onClose}
               className="rounded-lg p-2 text-surface-400 transition-colors hover:bg-surface-100"
@@ -298,7 +355,55 @@ export default function TaskDetailModal({
             </div>
           )}
 
-          {/* ── Title ────────────────────────────────────────────────── */}
+          {/* Sharing Info Banner */}
+          {task.is_shared_with_me && (
+            <div className="mb-4 rounded-xl bg-purple-50 border border-purple-200 p-3 flex items-center justify-between text-xs text-purple-800">
+              <span className="flex items-center gap-1.5 font-semibold">
+                <UserIcon className="h-4 w-4 text-purple-600" />
+                Compartilhada por @{task.owner?.username || "outro usuário"}
+              </span>
+            </div>
+          )}
+
+          {/* Current shares list (for owner) */}
+          {!task.is_shared_with_me && task.shares.length > 0 && (
+            <div className="mb-4 rounded-xl bg-indigo-50 border border-indigo-100 p-3 text-xs space-y-2">
+              <div className="flex items-center gap-1 font-bold text-indigo-900 uppercase tracking-wider">
+                <Share2 className="h-3.5 w-3.5" />
+                Compartilhada com:
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {task.shares.map((s) => (
+                  <span
+                    key={s.id}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 font-medium text-indigo-800 border border-indigo-200 shadow-2xs"
+                  >
+                    @{s.user.username}
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                        s.status === "accepted"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : s.status === "rejected"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {s.status === "accepted" ? "Aceito" : s.status === "rejected" ? "Recusado" : "Pendente"}
+                    </span>
+                    <button
+                      onClick={() => handleRevokeShare(s.id)}
+                      className="text-surface-400 hover:text-red-600 ml-1 cursor-pointer"
+                      title="Revogar compartilhamento"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Title */}
           {isEditing ? (
             <input
               type="text"
@@ -317,7 +422,7 @@ export default function TaskDetailModal({
             </h1>
           )}
 
-          {/* ── Meta row ────────────────────────────────────────────── */}
+          {/* Meta row */}
           <div className="mb-5 flex flex-wrap gap-3 text-sm text-surface-500">
             {task.due_date && (
               <span
@@ -337,7 +442,7 @@ export default function TaskDetailModal({
             )}
           </div>
 
-          {/* ── Description ─────────────────────────────────────────── */}
+          {/* Description */}
           {isEditing ? (
             <textarea
               value={editDescription}
@@ -365,10 +470,9 @@ export default function TaskDetailModal({
             </div>
           )}
 
-          {/* ── Edit mode fields ────────────────────────────────────── */}
+          {/* Edit mode fields */}
           {isEditing && (
             <div className="mb-4 space-y-3 rounded-xl bg-surface-50 p-4">
-              {/* Priority */}
               <div>
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-surface-500">
                   Prioridade
@@ -391,7 +495,6 @@ export default function TaskDetailModal({
                 </div>
               </div>
 
-              {/* Dates Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="edit-start-date" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-surface-500">
@@ -402,7 +505,7 @@ export default function TaskDetailModal({
                     type="date"
                     value={editStartDate}
                     onChange={(e) => setEditStartDate(e.target.value)}
-                    className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
                   />
                   {editStartDate && (
                     <div className="mt-2 flex items-center gap-2">
@@ -419,7 +522,7 @@ export default function TaskDetailModal({
                           type="time"
                           value={editStartTime || "09:00"}
                           onChange={(e) => setEditStartTime(e.target.value)}
-                          className="flex-1 rounded-lg border border-surface-300 bg-white px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
+                          className="flex-1 rounded-lg border border-surface-300 bg-white px-2 py-1.5 text-sm"
                         />
                       )}
                     </div>
@@ -434,12 +537,11 @@ export default function TaskDetailModal({
                     type="date"
                     value={editDueDate}
                     onChange={(e) => setEditDueDate(e.target.value)}
-                    className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
                   />
                 </div>
               </div>
 
-              {/* Tags */}
               <div>
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-surface-500">Tags</label>
                 <TagInput
@@ -450,21 +552,10 @@ export default function TaskDetailModal({
                 />
               </div>
 
-              {/* Save / Cancel */}
               <div className="flex justify-end gap-2 pt-1">
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setEditTitle(task.title);
-                    setEditDescription(task.description ?? "");
-                    setEditPriority(task.priority);
-                    setEditDueDate(task.due_date ?? "");
-                    setEditStartDate(task.start_datetime ? task.start_datetime.slice(0, 10) : "");
-                    setEditStartTime(task.start_datetime ? task.start_datetime.slice(11, 16) : "");
-                    setEditStartTimeEnabled(!!task.start_datetime && task.start_datetime.length >= 16);
-                    setEditTags(task.tag_list);
-                  }}
+                  onClick={() => setIsEditing(false)}
                   className="rounded-lg px-3 py-1.5 text-sm text-surface-500 hover:bg-surface-200"
                 >
                   Cancelar
@@ -481,7 +572,7 @@ export default function TaskDetailModal({
             </div>
           )}
 
-          {/* ── Tags display (view mode) ────────────────────────────── */}
+          {/* Tags display */}
           {!isEditing && task.tag_list.length > 0 && (
             <div className="mb-5 flex flex-wrap gap-1.5">
               {task.tag_list.map((tag) => (
@@ -490,72 +581,146 @@ export default function TaskDetailModal({
             </div>
           )}
 
-          {/* ── Subtasks section ─────────────────────────────────────── */}
+          {/* Subtasks Section */}
           <div className="border-t border-surface-100 pt-5">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-surface-700">
-                Subtarefas
-              </h3>
+              <h3 className="text-sm font-bold text-surface-700">Subtarefas</h3>
               {task.subtasks_total > 0 && (
                 <div className="w-32">
-                  <ProgressBar
-                    done={task.subtasks_done}
-                    total={task.subtasks_total}
-                  />
+                  <ProgressBar done={task.subtasks_done} total={task.subtasks_total} />
                 </div>
               )}
             </div>
 
             {/* Subtask list */}
-            <div className="space-y-1">
+            <div className="space-y-2">
               {task.children.map((sub) => (
                 <div
                   key={sub.id}
-                  className="group flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-surface-50"
+                  className="group rounded-xl border border-surface-200 bg-white p-3 space-y-2 hover:border-surface-300 transition-colors"
                 >
-                  <button
-                    onClick={() => toggleSubtask(sub)}
-                    className="flex-shrink-0 transition-transform hover:scale-110"
-                    aria-label={sub.status === "done" ? "Marcar como pendente" : "Marcar como concluída"}
-                  >
-                    {sub.status === "done" ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => toggleSubtask(sub)}
+                      className="flex-shrink-0 transition-transform hover:scale-110 cursor-pointer"
+                    >
+                      {sub.status === "done" ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                      ) : (
+                        <Circle className="h-5 w-5 text-surface-300 group-hover:text-brand-400" />
+                      )}
+                    </button>
+
+                    {/* Inline editing subtask title */}
+                    {editingSubtaskId === sub.id ? (
+                      <input
+                        type="text"
+                        value={editingSubtaskTitle}
+                        onChange={(e) => setEditingSubtaskTitle(e.target.value)}
+                        onBlur={() => handleSaveSubtaskTitle(sub.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveSubtaskTitle(sub.id);
+                          if (e.key === "Escape") setEditingSubtaskId(null);
+                        }}
+                        className="flex-1 rounded-md border border-brand-400 px-2 py-1 text-sm outline-none"
+                        autoFocus
+                      />
                     ) : (
-                      <Circle className="h-5 w-5 text-surface-300 group-hover:text-brand-400" />
+                      <span
+                        onClick={() => {
+                          setEditingSubtaskId(sub.id);
+                          setEditingSubtaskTitle(sub.title);
+                        }}
+                        className={`flex-1 text-sm cursor-pointer hover:text-brand-700 ${
+                          sub.status === "done" ? "text-surface-400 line-through" : "text-surface-700"
+                        }`}
+                        title="Clique para editar o nome da subtarefa"
+                      >
+                        {sub.title}
+                      </span>
                     )}
-                  </button>
-                  <span
-                    className={`flex-1 text-sm ${
-                      sub.status === "done"
-                        ? "text-surface-400 line-through"
-                        : "text-surface-700"
-                    }`}
-                  >
-                    {sub.title}
-                  </span>
-                  <button
-                    onClick={async () => {
-                      await onDelete(sub.id);
-                      await refreshTask();
-                    }}
-                    className="opacity-0 transition-opacity group-hover:opacity-100"
-                    title="Excluir subtarefa"
-                  >
-                    <Trash2 className="h-3.5 w-3.5 text-surface-400 hover:text-red-500" />
-                  </button>
+
+                    {/* Delegar responsaveis button */}
+                    <button
+                      onClick={() =>
+                        setAssigningSubtaskId(assigningSubtaskId === sub.id ? null : sub.id)
+                      }
+                      className="rounded-lg border border-surface-200 px-2 py-1 text-[11px] font-semibold text-surface-600 hover:bg-surface-100 transition-colors cursor-pointer"
+                      title="Atribuir responsáveis"
+                    >
+                      <UserPlus className="h-3 w-3 inline mr-1" />
+                      Delegar ({sub.assignees.length})
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        await onDelete(sub.id);
+                        await refreshTask();
+                      }}
+                      className="opacity-0 transition-opacity group-hover:opacity-100 cursor-pointer"
+                      title="Excluir subtarefa"
+                    >
+                      <Trash2 className="h-4 w-4 text-surface-400 hover:text-red-500" />
+                    </button>
+                  </div>
+
+                  {/* Assignees chips display */}
+                  {sub.assignees.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pl-8">
+                      {sub.assignees.map((assignee) => (
+                        <span
+                          key={assignee.id}
+                          className="inline-flex items-center gap-1 rounded-full bg-surface-100 px-2 py-0.5 text-[11px] font-semibold text-surface-700 border border-surface-200"
+                        >
+                          @{assignee.username}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Assignee selection panel */}
+                  {assigningSubtaskId === sub.id && (
+                    <div className="pl-8 pt-2 space-y-1">
+                      <p className="text-[11px] font-bold text-surface-500 uppercase tracking-wider">
+                        Selecione os responsáveis:
+                      </p>
+                      {eligibleAssignees.length === 0 ? (
+                        <p className="text-xs text-surface-400 italic">Nenhum usuário compartilhado elegível.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {eligibleAssignees.map((u) => {
+                            const isAssigned = sub.assignees.some((a) => a.id === u.id);
+                            return (
+                              <button
+                                key={u.id}
+                                onClick={() => handleToggleSubtaskAssignee(sub.id, sub.assignees, u)}
+                                className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer border ${
+                                  isAssigned
+                                    ? "bg-brand-600 text-white border-brand-600"
+                                    : "bg-surface-50 text-surface-700 border-surface-200 hover:bg-surface-100"
+                                }`}
+                              >
+                                @{u.username} {isAssigned && "✓"}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
 
             {/* Add subtask */}
             {showSubtaskInput ? (
-              <form onSubmit={handleAddSubtask} className="mt-2 flex gap-2">
+              <form onSubmit={handleAddSubtask} className="mt-3 flex gap-2">
                 <input
                   type="text"
                   value={subtaskTitle}
                   onChange={(e) => setSubtaskTitle(e.target.value)}
                   placeholder="Nome da subtarefa..."
-                  className="flex-1 rounded-lg border border-surface-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  className="flex-1 rounded-lg border border-surface-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
                   autoFocus
                 />
                 <button
@@ -579,7 +744,7 @@ export default function TaskDetailModal({
             ) : (
               <button
                 onClick={() => setShowSubtaskInput(true)}
-                className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-brand-600 transition-colors hover:bg-brand-50"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-brand-600 transition-colors hover:bg-brand-50 cursor-pointer"
               >
                 <Plus className="h-4 w-4" />
                 Adicionar subtarefa
@@ -588,6 +753,102 @@ export default function TaskDetailModal({
           </div>
         </div>
       </div>
+
+      {/* Modal Compartilhar Tarefa */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold text-surface-900 flex items-center gap-2">
+              <Share2 className="h-5 w-5 text-indigo-600" />
+              Compartilhar Atividade
+            </h3>
+            <p className="text-xs text-surface-500">
+              Selecione usuários ou grupos de usuários com quem deseja compartilhar esta tarefa.
+            </p>
+
+            {/* Users section */}
+            <div>
+              <label className="text-xs font-bold text-surface-700 uppercase tracking-wider block mb-1">
+                Usuários
+              </label>
+              <div className="max-h-36 overflow-y-auto rounded-xl border border-surface-200 p-2 space-y-1 bg-surface-50">
+                {allUsers.map((u) => {
+                  if (u.id === task.owner_id) return null;
+                  const isSelected = selectedShareUserIds.includes(u.id);
+                  return (
+                    <div
+                      key={u.id}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedShareUserIds(selectedShareUserIds.filter((id) => id !== u.id));
+                        } else {
+                          setSelectedShareUserIds([...selectedShareUserIds, u.id]);
+                        }
+                      }}
+                      className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-sm cursor-pointer ${
+                        isSelected ? "bg-indigo-100 text-indigo-900 font-semibold" : "bg-white text-surface-700 hover:bg-surface-100"
+                      }`}
+                    >
+                      <span>{u.full_name} (@{u.username})</span>
+                      {isSelected && <Check className="h-4 w-4 text-indigo-600" />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Groups section */}
+            {allGroups.length > 0 && (
+              <div>
+                <label className="text-xs font-bold text-surface-700 uppercase tracking-wider block mb-1">
+                  Grupos de Usuários
+                </label>
+                <div className="max-h-36 overflow-y-auto rounded-xl border border-surface-200 p-2 space-y-1 bg-surface-50">
+                  {allGroups.map((g) => {
+                    const isSelected = selectedShareGroupIds.includes(g.id);
+                    return (
+                      <div
+                        key={g.id}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedShareGroupIds(selectedShareGroupIds.filter((id) => id !== g.id));
+                          } else {
+                            setSelectedShareGroupIds([...selectedShareGroupIds, g.id]);
+                          }
+                        }}
+                        className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-sm cursor-pointer ${
+                          isSelected ? "bg-indigo-100 text-indigo-900 font-semibold" : "bg-white text-surface-700 hover:bg-surface-100"
+                        }`}
+                      >
+                        <span>Grupo: {g.name} ({g.members.length} membros)</span>
+                        {isSelected && <Check className="h-4 w-4 text-indigo-600" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowShareModal(false)}
+                className="rounded-xl border border-surface-200 px-4 py-2 text-sm font-semibold text-surface-600 hover:bg-surface-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteShare}
+                disabled={sharing || (selectedShareUserIds.length === 0 && selectedShareGroupIds.length === 0)}
+                className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {sharing ? "Enviando..." : "Enviar Convites"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

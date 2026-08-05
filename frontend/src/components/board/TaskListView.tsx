@@ -7,6 +7,7 @@ import { sortTasks } from "@/utils/sortTasks";
 import PriorityIndicator from "@/components/ui/PriorityIndicator";
 import TagBadge from "@/components/ui/TagBadge";
 import ProgressBar from "@/components/ui/ProgressBar";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 
 interface TaskListViewProps {
   tasks: Task[];
@@ -118,35 +119,35 @@ export default function TaskListView({ tasks, onTaskClick, onUpdate }: TaskListV
         </div>
 
         {/* Status Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-surface-400" />
-          <select
+        <div className="w-44">
+          <CustomSelect
+            options={[
+              { value: "all", label: "Todos os Status" },
+              { value: "todo", label: "Para Fazer" },
+              { value: "doing", label: "Em Andamento" },
+              { value: "done", label: "Concluído" },
+              { value: "standby", label: "Stand-by" },
+            ]}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border border-surface-200 bg-white px-3 py-2.5 text-sm font-medium text-surface-700 focus:border-brand-500 focus:outline-none"
-          >
-            <option value="all">Todos os Status</option>
-            <option value="todo">Para Fazer</option>
-            <option value="doing">Em Andamento</option>
-            <option value="done">Concluído</option>
-            <option value="standby">Stand-by</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+          />
         </div>
 
         {/* Priority Filter */}
-        <div className="flex items-center gap-2">
-          <select
+        <div className="w-48">
+          <CustomSelect
+            options={[
+              { value: "all", label: "Todas as Prioridades" },
+              { value: "high", label: "Alta Prioridade" },
+              { value: "normal", label: "Prioridade Normal" },
+              { value: "low", label: "Baixa Prioridade" },
+            ]}
             value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="rounded-xl border border-surface-200 bg-white px-3 py-2.5 text-sm font-medium text-surface-700 focus:border-brand-500 focus:outline-none"
-          >
-            <option value="all">Todas as Prioridades</option>
-            <option value="high">Alta Prioridade</option>
-            <option value="normal">Prioridade Normal</option>
-            <option value="low">Baixa Prioridade</option>
-          </select>
+            onChange={(val) => setPriorityFilter(val)}
+          />
         </div>
       </div>
+
 
       {/* Table headers / Sorting */}
       <div className="flex flex-col flex-1 overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-sm">
@@ -237,22 +238,20 @@ export default function TaskListView({ tasks, onTaskClick, onUpdate }: TaskListV
 
                 {/* Status */}
                 <div className="col-span-2" onClick={(e) => e.stopPropagation()}>
-                  <select
+                  <CustomSelect<Status>
+                    options={[
+                      { value: "todo", label: "Para Fazer" },
+                      { value: "doing", label: "Em Andamento" },
+                      { value: "done", label: "Concluído" },
+                      ...(task.status === "standby" ? [{ value: "standby" as Status, label: "Stand-by" }] : []),
+                    ]}
                     value={task.status}
-                    onChange={async (e) => {
-                      const newStatus = e.target.value as Status;
+                    onChange={async (newStatus) => {
                       await onUpdate(task.id, { status: newStatus });
                     }}
-                    className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold focus:outline-none cursor-pointer ${getStatusBadgeClass(task.status)}`}
-                  >
-                    <option value="todo" className="text-slate-800 bg-white">Para Fazer</option>
-                    <option value="doing" className="text-slate-800 bg-white">Em Andamento</option>
-                    <option value="done" className="text-slate-800 bg-white">Concluído</option>
-                    {task.status === "standby" && (
-                      <option value="standby" className="text-slate-800 bg-white" disabled>Stand-by</option>
-                    )}
-                  </select>
+                  />
                 </div>
+
 
                 {/* Actions */}
                 <div className="col-span-1 flex justify-end gap-1">

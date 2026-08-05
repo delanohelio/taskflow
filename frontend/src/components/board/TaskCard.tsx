@@ -1,8 +1,8 @@
-/** Draggable task card for the Kanban board. */
+/** Draggable task card for the Kanban board with share indicators. */
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Calendar, GripVertical } from "lucide-react";
+import { Calendar, GripVertical, Share2, User as UserIcon } from "lucide-react";
 import type { Task } from "@/types/task";
 import { formatDueDate } from "@/utils/helpers";
 import PriorityIndicator from "@/components/ui/PriorityIndicator";
@@ -67,6 +67,20 @@ export default function TaskCard({ task, onClick, onMoveTask }: TaskCardProps) {
         <GripVertical className="h-4 w-4 text-surface-400" />
       </button>
 
+      {/* Share Badges / Owner indicator */}
+      {task.is_shared_with_me && (
+        <div className="mb-2 inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-semibold text-purple-700 border border-purple-200">
+          <UserIcon className="h-3 w-3 text-purple-500" />
+          <span>De: {task.owner?.full_name || task.owner?.username || "Outro Usuário"}</span>
+        </div>
+      )}
+      {!task.is_shared_with_me && task.is_shared && (
+        <div className="mb-2 inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 border border-indigo-200">
+          <Share2 className="h-3 w-3 text-indigo-500" />
+          <span>Compartilhada</span>
+        </div>
+      )}
+
       {/* Header: priority + title */}
       <div className="mb-2 flex items-start gap-2 pr-6">
         <PriorityIndicator priority={task.priority} />
@@ -103,7 +117,7 @@ export default function TaskCard({ task, onClick, onMoveTask }: TaskCardProps) {
         )}
       </div>
 
-      {/* Quick status action buttons (for mobile / easy access) */}
+      {/* Quick status action buttons */}
       {onMoveTask && (
         <div
           className="mt-3 pt-3 border-t border-surface-100 flex justify-end gap-1.5"

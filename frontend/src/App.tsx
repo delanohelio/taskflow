@@ -1,12 +1,13 @@
-/** Root application component: sidebar + Kanban board + modals. */
+/** Root application component: AuthProvider + sidebar + screens + modals. */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Menu } from "lucide-react";
 import type { Task } from "@/types/task";
 import { useTasks } from "@/hooks/useTasks";
-import { useAuth } from "@/hooks/useAuth";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { fetchInvitations } from "@/services/api";
 
-import Sidebar from "@/components/layout/Sidebar";
+import Sidebar, { type ScreenType } from "@/components/layout/Sidebar";
 import LoginScreen from "@/components/layout/LoginScreen";
 import KanbanBoard from "@/components/board/KanbanBoard";
 import DailyReviewBanner from "@/components/board/DailyReviewBanner";
@@ -17,13 +18,18 @@ import StandbyScreen from "@/components/board/StandbyScreen";
 import ArchivedScreen from "@/components/board/ArchivedScreen";
 import SettingsModal from "@/components/modals/SettingsModal";
 import CalendarView from "@/components/board/CalendarView";
+import UserManagementScreen from "@/components/modals/UserManagementScreen";
+import UserGroupsScreen from "@/components/modals/UserGroupsScreen";
+import InvitationsScreen from "@/components/modals/InvitationsScreen";
 
-export default function App() {
+function TaskFlowMain() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+
   const {
     board,
     review,
     archivedTasks,
-    loading,
+    loading: tasksLoading,
     error,
     createTask,
     updateTask,
@@ -32,24 +38,34 @@ export default function App() {
     refreshBoard,
   } = useTasks();
 
-  // ── Authentication & UI states ─────────────────────────────────────
-  const { unlocked, loading: authLoading, error: authError, login, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-
-  const [activeScreen, setActiveScreen] = useState<"board" | "list" | "calendar" | "standby" | "archived">("board");
+  const [activeScreen, setActiveScreen] = useState<ScreenType>("board");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [invitationsCount, setInvitationsCount] = useState(0);
 
-  // ── Tag filter toggle ──────────────────────────────────────────────
+  const loadInvitationsCount = async () => {
+    if (!isAuthenticated) return;
+    try {
+      const invs = await fetchInvitations();
+      setInvitationsCount(invs.length);
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => {
+    loadInvitationsCount();
+    const interval = setInterval(loadInvitationsCount, 30_000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
   const handleToggleTag = useCallback((tag: string) => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   }, []);
 
-  // ── Filtered board (apply tag filters) ─────────────────────────────
   const filteredBoard = useMemo(() => {
     if (selectedTags.length === 0) return board;
 
@@ -67,7 +83,6 @@ export default function App() {
     };
   }, [board, selectedTags]);
 
-  // ── Filtered lists for specific views ──────────────────────────────
   const filteredActiveTasks = useMemo(() => {
     const list = [...board.todo, ...board.doing, ...board.done, ...board.standby];
     if (selectedTags.length === 0) return list;
@@ -92,7 +107,6 @@ export default function App() {
     );
   }, [archivedTasks, selectedTags]);
 
-  // Calculate list of all unique tags in the board for autocomplete
   const availableTags = useMemo(() => {
     const tagsSet = new Set<string>();
     const allTasks = [
@@ -107,27 +121,24 @@ export default function App() {
     return Array.from(tagsSet).sort();
   }, [board]);
 
-  // ── Auth Loading state ─────────────────────────────────────────────
   if (authLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-surface-50">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
           <p className="text-sm font-medium text-surface-500">
-            Verificando acesso...
+            Carregando autenticação...
           </p>
         </div>
       </div>
     );
   }
 
-  // ── Auth Lock Screen ────────────────────────────────────────────────
-  if (!unlocked) {
-    return <LoginScreen onLogin={login} hasError={authError !== null} />;
+  if (!isAuthenticated) {
+    return <LoginScreen />;
   }
 
-  // ── Task Loading state ─────────────────────────────────────────────
-  if (loading) {
+  if (tasksLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-surface-50">
         <div className="flex flex-col items-center gap-3">
@@ -140,9 +151,7 @@ export default function App() {
     );
   }
 
-  // ── Error state ────────────────────────────────────────────────────
   if (error) {
-
     return (
       <div className="flex h-screen items-center justify-center bg-surface-50">
         <div className="max-w-sm rounded-xl border border-red-200 bg-red-50 p-6 text-center">
@@ -175,10 +184,10 @@ export default function App() {
           setSidebarOpen(false);
         }}
         archivedCount={archivedTasks.length}
+        invitationsCount={invitationsCount}
         onTaskClick={(task) => setSelectedTask(task)}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onLogout={logout}
         onOpenSettings={() => setShowSettingsModal(true)}
       />
 
@@ -199,41 +208,61 @@ export default function App() {
         </header>
 
         {/* Dynamic Screen Area */}
-        <section className="flex-1 overflow-auto px-8 py-6">
+        <section className="flex-1 overflow-auto">
           {activeScreen === "board" && (
-            <KanbanBoard
-              board={filteredBoard}
-              onMoveTask={moveTask}
-              onTaskClick={(task) => setSelectedTask(task)}
-            />
+            <div className="p-8">
+              <KanbanBoard
+                board={filteredBoard}
+                onMoveTask={moveTask}
+                onTaskClick={(task) => setSelectedTask(task)}
+              />
+            </div>
           )}
           {activeScreen === "list" && (
-            <TaskListView
-              tasks={filteredActiveTasks}
-              onTaskClick={(task) => setSelectedTask(task)}
-              onUpdate={updateTask}
-            />
+            <div className="p-8">
+              <TaskListView
+                tasks={filteredActiveTasks}
+                onTaskClick={(task) => setSelectedTask(task)}
+                onUpdate={updateTask}
+              />
+            </div>
           )}
           {activeScreen === "calendar" && (
-            <CalendarView
-              tasks={filteredActiveTasks}
-              onTaskClick={(task) => setSelectedTask(task)}
-            />
+            <div className="p-8">
+              <CalendarView
+                tasks={filteredActiveTasks}
+                onTaskClick={(task) => setSelectedTask(task)}
+              />
+            </div>
           )}
           {activeScreen === "standby" && (
-            <StandbyScreen
-              tasks={filteredStandbyTasks}
-              onTaskClick={(task) => setSelectedTask(task)}
-              onUpdate={updateTask}
-              onDelete={deleteTask}
-            />
+            <div className="p-8">
+              <StandbyScreen
+                tasks={filteredStandbyTasks}
+                onTaskClick={(task) => setSelectedTask(task)}
+                onUpdate={updateTask}
+                onDelete={deleteTask}
+              />
+            </div>
           )}
           {activeScreen === "archived" && (
-            <ArchivedScreen
-              tasks={filteredArchivedTasks}
-              onTaskClick={(task) => setSelectedTask(task)}
-              onUpdate={updateTask}
-              onDelete={deleteTask}
+            <div className="p-8">
+              <ArchivedScreen
+                tasks={filteredArchivedTasks}
+                onTaskClick={(task) => setSelectedTask(task)}
+                onUpdate={updateTask}
+                onDelete={deleteTask}
+              />
+            </div>
+          )}
+          {activeScreen === "users" && <UserManagementScreen />}
+          {activeScreen === "groups" && <UserGroupsScreen />}
+          {activeScreen === "invitations" && (
+            <InvitationsScreen
+              onInvitationHandled={() => {
+                loadInvitationsCount();
+                refreshBoard();
+              }}
             />
           )}
         </section>
@@ -267,5 +296,13 @@ export default function App() {
         />
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <TaskFlowMain />
+    </AuthProvider>
   );
 }

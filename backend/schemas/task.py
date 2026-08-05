@@ -6,6 +6,10 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
+from .user import UserResponse
+from .share import TaskShareResponse
+
+
 # ── Request schemas ──────────────────────────────────────────────────────
 
 class TaskCreate(BaseModel):
@@ -56,13 +60,21 @@ class TaskResponse(BaseModel):
     priority: str
     tags: Optional[str] = None
     parent_id: Optional[int] = None
+    owner_id: Optional[int] = None
     archived: bool = False
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
+    # User & Sharing details
+    owner: Optional[UserResponse] = None
+    shares: list[TaskShareResponse] = Field(default_factory=list)
+    assignees: list[UserResponse] = Field(default_factory=list)
+
     # Computed fields (populated in the route, not by from_attributes)
     tag_list: list[str] = Field(default_factory=list)
     is_overdue: bool = False
+    is_shared: bool = False
+    is_shared_with_me: bool = False
     subtasks_done: int = 0
     subtasks_total: int = 0
     children: list["TaskResponse"] = Field(default_factory=list)
@@ -75,3 +87,4 @@ class DailyReviewResponse(BaseModel):
     overdue_count: int = 0
     overdue_tasks: list[TaskResponse] = Field(default_factory=list)
     today_tasks: list[TaskResponse] = Field(default_factory=list)
+

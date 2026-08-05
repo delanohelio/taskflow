@@ -8,7 +8,8 @@ services:
       - "8000:8000"
     environment:
       - DB_PATH=/app/data/tasks.db
-      - PAGE_PASSWORD=${PAGE_PASSWORD:-}
+      - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD:-admin123}
+      - JWT_SECRET=${JWT_SECRET:-taskflow-secret-key-2026-secure}
       - AUTO_ARCHIVE_AFTER_MINUTES=${AUTO_ARCHIVE_AFTER_MINUTES:-}
     volumes:
       - ./data:/app/data

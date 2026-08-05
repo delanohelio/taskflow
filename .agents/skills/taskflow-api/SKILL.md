@@ -116,7 +116,50 @@ curl -s -X PATCH http://localhost:8000/api/tasks/<id_da_tarefa> \
   }'
 ```
 
+### I. Exportar Backup
+Obtenha o backup completo do sistema em formato JSON.
+
+```bash
+curl -s http://localhost:8000/api/backup/export > taskflow_backup.json
+```
+
+### J. Importar / Restaurar Backup
+Restaure o banco de dados e as configurações enviando o arquivo `.json` de backup.
+
+```bash
+curl -s -X POST http://localhost:8000/api/backup/import \
+  -H "Content-Type: application/json" \
+  -d @taskflow_backup.json
+```
+
+### K. Consultar e Atualizar Configurações
+Obtenha ou modifique as configurações globais da aplicação (como o tempo de auto-arquivamento em minutos).
+
+```bash
+# Consultar configurações
+curl -s http://localhost:8000/api/settings
+
+# Atualizar auto-arquivamento (ex: 60 minutos)
+curl -s -X PATCH http://localhost:8000/api/settings \
+  -H "Content-Type: application/json" \
+  -d '{"auto_archive_after_minutes": 60}'
+```
+
+### L. Verificar Autenticação de Senha
+Verifique se a senha é exigida ou valide a senha informada.
+
+```bash
+# Verificar se senha é exigida
+curl -s http://localhost:8000/api/auth/config
+
+# Validar senha do painel
+curl -s -X POST http://localhost:8000/api/auth/verify \
+  -H "Content-Type: application/json" \
+  -d '{"password": "<sua_senha>"}'
+```
+
 ---
+
 
 ## 3. Templates de Visualização de Saída (Markdown)
 

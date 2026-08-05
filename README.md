@@ -22,14 +22,14 @@ Aplicação full-stack de gerenciamento de tarefas pessoais com quadro Kanban in
 O projeto está totalmente dockerizado. Para iniciar toda a stack (Backend, Frontend e Banco de dados SQLite persistente) com um único comando:
 
 ```bash
-# Iniciar o painel sem senha
+# Iniciar a aplicação
 docker compose up -d
 
-# Iniciar o painel com senha de acesso à tela
-PAGE_PASSWORD=minhasenha docker compose up -d
+# Iniciar definindo uma senha padrão customizada para o usuário administrador
+DEFAULT_ADMIN_PASSWORD=minhasenhaadmin docker compose up -d
 
-# Iniciar com senha e auto-arquivamento de tarefas concluídas após 60 minutos
-PAGE_PASSWORD=minhasenha AUTO_ARCHIVE_AFTER_MINUTES=60 docker compose up -d
+# Iniciar com senha de admin e auto-arquivamento de tarefas concluídas após 60 minutos
+DEFAULT_ADMIN_PASSWORD=minhasenhaadmin AUTO_ARCHIVE_AFTER_MINUTES=60 docker compose up -d
 ```
 
 O Frontend estará disponível em: `http://localhost:4000`  
@@ -39,6 +39,28 @@ Para parar os serviços:
 ```bash
 docker compose down
 ```
+
+### Autenticação de Múltiplos Usuários & Usuário Admin
+
+- O sistema utiliza autenticação baseada em tokens **JWT** (JSON Web Tokens).
+- **Setup Inicial**: No primeiro acesso, o sistema cria automaticamente um usuário administrador padrão (`username: admin`).
+- A senha inicial do admin é configurável através da variável de ambiente `DEFAULT_ADMIN_PASSWORD` (padrão: `admin123`).
+- **Usuário Admin**: Possui seu próprio plano de tarefas e um menu exclusivo de **Gestão de Usuários** para criar, modificar funções (`admin` ou `user`) e gerenciar usuários.
+- **Perfil do Usuário**: Qualquer usuário pode alterar sua senha, nome completo e e-mail no menu de configurações e realizar logout a qualquer momento na sidebar.
+
+### Compartilhamento de Atividades & Subtarefas Delegadas
+
+- O proprietário de uma tarefa pode compartilhá-la com outros usuários ou com **Grupos de Usuários**.
+- Os destinatários recebem convites na seção de **Convites** da Sidebar e devem **Aceitar** a atividade para que ela faça parte do seu plano de tarefas.
+- **Permissões**:
+  - Apenas o dono pode compartilhar ou excluir a tarefa.
+  - Usuários que aceitaram o compartilhamento podem editar o conteúdo da tarefa, subtarefas e status.
+  - Subtarefas podem ter responsáveis delegados (chips) escolhidos entre o dono e participantes do compartilhamento.
+  - Se um usuário revogar o compartilhamento, suas delegações de subtarefas são automaticamente removidas.
+
+### Grupos de Usuários
+
+- Permite cadastrar grupos de usuários no menu lateral para facilitar o compartilhamento em lote de atividades recorrentes.
 
 ### 2. Desenvolvimento Local (Manual)
 
@@ -205,5 +227,12 @@ web_app/
 | `PATCH` | `/api/settings` | Atualiza as configurações do app (auto-arquivamento) |
 | `GET` | `/api/auth/config` | Retorna se a senha é exigida no painel |
 | `POST` | `/api/auth/verify` | Valida a senha enviada pelo usuário |
+
+## Roadmap e Agent Skills
+
+- **Novas Features & Histórico**: O arquivo [.agents/skills/FEATURES.md](file:///.agents/skills/FEATURES.md) contém o levantamento detalhado das novas funcionalidades em especificação (Múltiplos Usuários, Compartilhamento, Grupos de Usuários) e a lista completa de features já realizadas.
+- **Agent Skills**:
+  - [docker-setup](file:///.agents/skills/docker-setup/SKILL.md): Instruções para gerenciamento do ambiente TaskFlow com Docker e Docker Compose.
+  - [taskflow-api](file:///.agents/skills/taskflow-api/SKILL.md): Templates e guia de uso da API REST FastAPI para gerenciar tarefas e backups.
 
 

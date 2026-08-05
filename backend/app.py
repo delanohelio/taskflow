@@ -59,6 +59,8 @@ async def lifespan(app: FastAPI):
     """
     # Ensure tables exist
     Base.metadata.create_all(bind=engine)
+    from .database import init_default_admin
+    init_default_admin()
 
     # Background temporal trigger (every 60 seconds)
     task = asyncio.create_task(_temporal_trigger_loop())
@@ -322,6 +324,16 @@ async def import_backup(request: Request):
 
 
 
+from .routes.auth import router as auth_router
+from .routes.admin import router as admin_router
+from .routes.groups import router as groups_router
+from .routes.shares import router as shares_router
+from .routes.tasks import router as tasks_router
+
+app.include_router(auth_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
+app.include_router(groups_router, prefix="/api")
+app.include_router(shares_router, prefix="/api")
 app.include_router(tasks_router, prefix="/api")
 
 

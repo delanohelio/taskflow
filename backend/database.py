@@ -6,7 +6,7 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from .models.task import Base
+from .models import Base, User, Task, UserGroup, TaskShare
 
 # ── Database location ────────────────────────────────────────────────────
 # Default: tasks.db alongside this file.  Override with DB_PATH env var.
@@ -48,6 +48,46 @@ with engine.begin() as conn:
         except Exception as e:
             print(f"Migration error (completed_at): {e}")
 
+# Add migration to ensure 'owner_id' column exists in tasks
+with engine.begin() as conn:
+    try:
+        conn.execute(text("SELECT owner_id FROM tasks LIMIT 1"))
+    except Exception:
+        try:
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN owner_id INTEGER DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL"))
+            print("Successfully migrated tasks table to include 'owner_id' column.")
+        except Exception as e:
+            print(f"Migration error (owner_id): {e}")
+
+
+def init_default_admin():
+    """Ensure default admin user exists on startup and has role='admin'."""
+    from .auth import hash_password
+    db = SessionLocal()
+    try:
+        admin = db.query(User).filter(User.username == "admin").first()
+        if not admin:
+            default_password = os.environ.get("DEFAULT_ADMIN_PASSWORD", "admin123")
+            admin_user = User(
+                username="admin",
+                password_hash=hash_password(default_password),
+                full_name="Administrador",
+                email="admin@taskflow.local",
+                role="admin",
+            )
+            db.add(admin_user)
+            db.commit()
+            print(f"Default admin user created successfully (username: 'admin').")
+        elif admin.role != "admin":
+            admin.role = "admin"
+            db.commit()
+            print("Ensured admin user has role='admin'.")
+    except Exception as e:
+        print(f"Error seeding default admin user: {e}")
+    finally:
+        db.close()
+
+
 
 
 def get_db():
@@ -57,3 +97,4 @@ def get_db():
         yield db
     finally:
         db.close()
+

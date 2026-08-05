@@ -3,10 +3,19 @@
 import axios from "axios";
 import type {
   BoardData,
+  CreateGroupPayload,
   CreateTaskPayload,
+  CreateUserPayload,
   DailyReview,
+  ShareTaskPayload,
   Task,
+  TaskShare,
+  UpdateGroupPayload,
+  UpdateProfilePayload,
   UpdateTaskPayload,
+  UpdateUserPayload,
+  User,
+  UserGroup,
 } from "@/types/task";
 import { API_BASE_URL } from "@/utils/constants";
 
@@ -15,17 +24,148 @@ const api = axios.create({
   timeout: 15_000,
 });
 
+// Attach Authorization header if JWT token exists in localStorage
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("taskflow_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// ── Helper: Parse API Error ───────────────────────────────────────────────
+
+export function parseApiError(err: any, fallbackMessage: string = "Ocorreu um erro na requisição."): string {
+  if (!err) return fallbackMessage;
+  const detail = err.response?.data?.detail;
+  if (typeof detail === "string") {
+    return detail;
+  }
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item: any) => {
+        if (typeof item === "string") return item;
+        if (item?.msg) {
+          const fieldLoc = item.loc ? item.loc[item.loc.length - 1] : "";
+          const fieldMap: Record<string, string> = {
+            password: "Senha",
+            username: "Nome de usuário",
+            full_name: "Nome completo",
+            email: "E-mail",
+            role: "Função",
+            title: "Título",
+          };
+          const fieldName = fieldMap[fieldLoc] || fieldLoc;
+          let msg = item.msg;
+          if (msg.includes("String should have at least")) {
+            const minMatch = msg.match(/\d+/);
+            const minCount = minMatch ? minMatch[0] : "";
+            msg = `deve ter pelo menos ${minCount} caracteres`;
+          }
+          return fieldName ? `${fieldName} ${msg}` : msg;
+        }
+        return JSON.stringify(item);
+      })
+      .join(". ");
+  }
+  if (detail && typeof detail === "object") {
+    return JSON.stringify(detail);
+  }
+  return err.message || fallbackMessage;
+}
+
 // ── Auth Services ────────────────────────────────────────────────────────
-export async function fetchAuthConfig(): Promise<{ require_password: boolean }> {
-  const { data } = await api.get<{ require_password: boolean }>("/auth/config");
+
+export async function loginUser(username: string, password: string): Promise<{ access_token: string; user: User }> {
+  const { data } = await api.post<{ access_token: string; user: User }>("/auth/login", {
+    username,
+    password,
+  });
   return data;
 }
 
-export async function verifyPagePassword(password: string): Promise<{ valid: boolean }> {
-  const { data } = await api.post<{ valid: boolean }>("/auth/verify", { password });
+export async function fetchMe(): Promise<User> {
+  const { data } = await api.get<User>("/auth/me");
   return data;
 }
 
+export async function updateProfile(payload: UpdateProfilePayload): Promise<User> {
+  const { data } = await api.patch<User>("/auth/profile", payload);
+  return data;
+}
+
+// ── Admin User Management ────────────────────────────────────────────────
+
+export async function fetchUsers(): Promise<User[]> {
+  const { data } = await api.get<User[]>("/admin/users");
+  return data;
+}
+
+export async function createUser(payload: CreateUserPayload): Promise<User> {
+  const { data } = await api.post<User>("/admin/users", payload);
+  return data;
+}
+
+export async function updateUser(userId: number, payload: UpdateUserPayload): Promise<User> {
+  const { data } = await api.patch<User>(`/admin/users/${userId}`, payload);
+  return data;
+}
+
+export async function deleteUser(userId: number): Promise<void> {
+  await api.delete(`/admin/users/${userId}`);
+}
+
+// ── User Groups Management ───────────────────────────────────────────────
+
+export async function fetchUserGroups(): Promise<UserGroup[]> {
+  const { data } = await api.get<UserGroup[]>("/user-groups");
+  return data;
+}
+
+export async function createGroup(payload: CreateGroupPayload): Promise<UserGroup> {
+  const { data } = await api.post<UserGroup>("/user-groups", payload);
+  return data;
+}
+
+export async function updateGroup(groupId: number, payload: UpdateGroupPayload): Promise<UserGroup> {
+  const { data } = await api.patch<UserGroup>(`/user-groups/${groupId}`, payload);
+  return data;
+}
+
+export async function deleteGroup(groupId: number): Promise<void> {
+  await api.delete(`/user-groups/${groupId}`);
+}
+
+// ── Task Sharing & Invitations ───────────────────────────────────────────
+
+export async function shareTask(taskId: number, payload: ShareTaskPayload): Promise<TaskShare[]> {
+  const { data } = await api.post<TaskShare[]>(`/tasks/${taskId}/share`, payload);
+  return data;
+}
+
+export async function fetchInvitations(): Promise<TaskShare[]> {
+  const { data } = await api.get<TaskShare[]>("/shares/invitations");
+  return data;
+}
+
+export async function acceptShare(shareId: number): Promise<TaskShare> {
+  const { data } = await api.post<TaskShare>(`/shares/${shareId}/accept`);
+  return data;
+}
+
+export async function rejectShare(shareId: number): Promise<TaskShare> {
+  const { data } = await api.post<TaskShare>(`/shares/${shareId}/reject`);
+  return data;
+}
+
+export async function revokeShare(shareId: number): Promise<void> {
+  await api.delete(`/shares/${shareId}`);
+}
+
+export async function setSubtaskAssignees(subtaskId: number, userIds: number[]): Promise<Task> {
+  const { data } = await api.post<Task>(`/tasks/${subtaskId}/assignees`, { user_ids: userIds });
+  return data;
+}
 
 // ── Task CRUD ────────────────────────────────────────────────────────────
 
@@ -126,5 +266,3 @@ export async function importBackup(backupData: any): Promise<{ status: string; i
   const { data } = await api.post<{ status: string; imported_count: number }>("/backup/import", backupData);
   return data;
 }
-
-
