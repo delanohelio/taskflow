@@ -109,7 +109,8 @@ export default function SettingsModal({ onClose, onArchiveDone }: SettingsModalP
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!window.confirm("Importar um backup substituirá TODAS as tarefas atuais. Deseja continuar?")) {
+    if (!window.confirm("Importar um backup substituirá TODAS as suas tarefas atuais. Deseja continuar?")) {
+
       e.target.value = "";
       return;
     }
