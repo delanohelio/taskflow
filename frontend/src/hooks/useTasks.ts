@@ -41,7 +41,7 @@ const EMPTY_REVIEW: DailyReview = {
   overdue_tasks: [],
 };
 
-export function useTasks(): UseTasksReturn {
+export function useTasks(enabled: boolean = true): UseTasksReturn {
   const [board, setBoard] = useState<BoardData>(EMPTY_BOARD);
   const [review, setReview] = useState<DailyReview>(EMPTY_REVIEW);
   const [archivedTasks, setArchivedTasks] = useState<Task[]>([]);
@@ -69,14 +69,19 @@ export function useTasks(): UseTasksReturn {
     }
   }, []);
 
-  // Initial load + polling
+  // Initial load + polling (only when enabled / authenticated)
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     refreshBoard();
     intervalRef.current = setInterval(refreshBoard, POLL_INTERVAL_MS);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [refreshBoard]);
+  }, [enabled, refreshBoard]);
+
 
   // ── Mutation wrappers (auto-refresh after each) ───────────────────
 

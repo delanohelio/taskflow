@@ -36,7 +36,8 @@ function TaskFlowMain() {
     moveTask,
     deleteTask,
     refreshBoard,
-  } = useTasks();
+  } = useTasks(isAuthenticated);
+
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);

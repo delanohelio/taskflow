@@ -33,6 +33,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Response interceptor to handle 401 errors cleanly
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && !error.config?.url?.includes("/auth/login")) {
+      localStorage.removeItem("taskflow_token");
+    }
+    return Promise.reject(error);
+  }
+);
+
+
 // ── Helper: Parse API Error ───────────────────────────────────────────────
 
 export function parseApiError(err: any, fallbackMessage: string = "Ocorreu um erro na requisição."): string {
