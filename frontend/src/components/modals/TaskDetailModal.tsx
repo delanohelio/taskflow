@@ -23,6 +23,7 @@ import type { Task, CreateTaskPayload, Priority, UpdateTaskPayload, User, UserGr
 import { PRIORITY_CONFIG } from "@/utils/constants";
 import { formatDueDate, formatStartDateTime } from "@/utils/helpers";
 import * as api from "@/services/api";
+import { AutocompleteMultiSelect, AutocompleteOption } from "@/components/ui/AutocompleteMultiSelect";
 import PriorityIndicator from "@/components/ui/PriorityIndicator";
 import TagBadge from "@/components/ui/TagBadge";
 import ProgressBar from "@/components/ui/ProgressBar";
@@ -114,7 +115,7 @@ export default function TaskDetailModal({
   // Load potential share targets
   const openShareModal = async () => {
     try {
-      const [uList, gList] = await Promise.all([api.fetchUsers(), api.fetchUserGroups()]);
+      const [uList, gList] = await Promise.all([api.fetchPublicUsers(), api.fetchUserGroups()]);
       setAllUsers(uList);
       setAllGroups(gList);
       setShowShareModal(true);
@@ -122,6 +123,7 @@ export default function TaskDetailModal({
       console.error("Erro ao carregar lista para compartilhamento", err);
     }
   };
+
 
   async function handleSave() {
     await onUpdate(task.id, {
@@ -756,84 +758,63 @@ export default function TaskDetailModal({
 
       {/* Modal Compartilhar Tarefa */}
       {showShareModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-surface-900 flex items-center gap-2">
-              <Share2 className="h-5 w-5 text-indigo-600" />
-              Compartilhar Atividade
-            </h3>
-            <p className="text-xs text-surface-500">
-              Selecione usuários ou grupos de usuários com quem deseja compartilhar esta tarefa.
-            </p>
-
-            {/* Users section */}
-            <div>
-              <label className="text-xs font-bold text-surface-700 uppercase tracking-wider block mb-1">
-                Usuários
-              </label>
-              <div className="max-h-36 overflow-y-auto rounded-xl border border-surface-200 p-2 space-y-1 bg-surface-50">
-                {allUsers.map((u) => {
-                  if (u.id === task.owner_id) return null;
-                  const isSelected = selectedShareUserIds.includes(u.id);
-                  return (
-                    <div
-                      key={u.id}
-                      onClick={() => {
-                        if (isSelected) {
-                          setSelectedShareUserIds(selectedShareUserIds.filter((id) => id !== u.id));
-                        } else {
-                          setSelectedShareUserIds([...selectedShareUserIds, u.id]);
-                        }
-                      }}
-                      className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-sm cursor-pointer ${
-                        isSelected ? "bg-indigo-100 text-indigo-900 font-semibold" : "bg-white text-surface-700 hover:bg-surface-100"
-                      }`}
-                    >
-                      <span>{u.full_name} (@{u.username})</span>
-                      {isSelected && <Check className="h-4 w-4 text-indigo-600" />}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Groups section */}
-            {allGroups.length > 0 && (
-              <div>
-                <label className="text-xs font-bold text-surface-700 uppercase tracking-wider block mb-1">
-                  Grupos de Usuários
-                </label>
-                <div className="max-h-36 overflow-y-auto rounded-xl border border-surface-200 p-2 space-y-1 bg-surface-50">
-                  {allGroups.map((g) => {
-                    const isSelected = selectedShareGroupIds.includes(g.id);
-                    return (
-                      <div
-                        key={g.id}
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedShareGroupIds(selectedShareGroupIds.filter((id) => id !== g.id));
-                          } else {
-                            setSelectedShareGroupIds([...selectedShareGroupIds, g.id]);
-                          }
-                        }}
-                        className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-sm cursor-pointer ${
-                          isSelected ? "bg-indigo-100 text-indigo-900 font-semibold" : "bg-white text-surface-700 hover:bg-surface-100"
-                        }`}
-                      >
-                        <span>Grupo: {g.name} ({g.members.length} membros)</span>
-                        {isSelected && <Check className="h-4 w-4 text-indigo-600" />}
-                      </div>
-                    );
-                  })}
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 md:p-8 shadow-2xl space-y-5 border border-surface-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600">
+                  <Share2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-surface-900">Compartilhar Atividade</h3>
+                  <p className="text-xs text-surface-500">Busque e selecione usuários ou grupos para enviar convites.</p>
                 </div>
               </div>
-            )}
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="rounded-xl p-2 text-surface-400 hover:bg-surface-100 hover:text-surface-600 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="space-y-4">
+              <AutocompleteMultiSelect
+                label="Buscar Usuários"
+                options={allUsers
+                  .filter((u) => u.id !== task.owner_id)
+                  .map((u) => ({
+                    id: u.id,
+                    label: `${u.full_name} (@${u.username})`,
+                    sublabel: u.email || `@${u.username}`,
+                    type: "user",
+                  }))}
+                selectedIds={selectedShareUserIds}
+                onChange={(ids) => setSelectedShareUserIds(ids as number[])}
+                placeholder="Digite o nome ou username para buscar um usuário..."
+              />
+
+              {allGroups.length > 0 && (
+                <AutocompleteMultiSelect
+                  label="Buscar Grupos de Usuários"
+                  options={allGroups.map((g) => ({
+                    id: g.id,
+                    label: `Grupo: ${g.name}`,
+                    sublabel: `${g.members.length} membro(s) no grupo`,
+                    type: "group",
+                  }))}
+                  selectedIds={selectedShareGroupIds}
+                  onChange={(ids) => setSelectedShareGroupIds(ids as number[])}
+                  placeholder="Digite o nome do grupo para buscar..."
+                />
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setShowShareModal(false)}
-                className="rounded-xl border border-surface-200 px-4 py-2 text-sm font-semibold text-surface-600 hover:bg-surface-100"
+                className="rounded-xl border border-surface-200 px-5 py-2.5 text-sm font-semibold text-surface-600 hover:bg-surface-100 transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
@@ -841,7 +822,7 @@ export default function TaskDetailModal({
                 type="button"
                 onClick={handleExecuteShare}
                 disabled={sharing || (selectedShareUserIds.length === 0 && selectedShareGroupIds.length === 0)}
-                className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors cursor-pointer"
               >
                 {sharing ? "Enviando..." : "Enviar Convites"}
               </button>
@@ -849,6 +830,7 @@ export default function TaskDetailModal({
           </div>
         </div>
       )}
+
     </div>
   );
 }

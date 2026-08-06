@@ -106,6 +106,12 @@ export async function updateProfile(payload: UpdateProfilePayload): Promise<User
   return data;
 }
 
+export async function fetchPublicUsers(q?: string): Promise<User[]> {
+  const { data } = await api.get<User[]>("/users", { params: { q } });
+  return data;
+}
+
+
 // ── Admin User Management ────────────────────────────────────────────────
 
 export async function fetchUsers(): Promise<User[]> {

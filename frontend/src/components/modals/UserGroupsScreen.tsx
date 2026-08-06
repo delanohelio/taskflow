@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { UserCheck, Plus, Trash2, Edit3, Users, Check, X } from "lucide-react";
+import { UserCheck, Plus, Trash2, Edit3, Users, X, AlertCircle } from "lucide-react";
 import type { User, UserGroup } from "@/types/task";
-import { createGroup, deleteGroup, fetchUserGroups, fetchUsers, updateGroup } from "@/services/api";
+import { createGroup, deleteGroup, fetchUserGroups, fetchPublicUsers, parseApiError, updateGroup } from "@/services/api";
+import { AutocompleteMultiSelect, AutocompleteOption } from "@/components/ui/AutocompleteMultiSelect";
 
 export default function UserGroupsScreen() {
   const [groups, setGroups] = useState<UserGroup[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -14,15 +16,17 @@ export default function UserGroupsScreen() {
   const [name, setName] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const [gData, uData] = await Promise.all([fetchUserGroups(), fetchUsers()]);
+      const [gData, uData] = await Promise.all([fetchUserGroups(), fetchPublicUsers()]);
       setGroups(gData);
       setAllUsers(uData);
-    } catch (err) {
-      console.error("Erro ao carregar grupos", err);
+    } catch (err: any) {
+      setError(parseApiError(err, "Erro ao carregar lista de grupos ou usuários."));
     } finally {
       setLoading(false);
     }
@@ -36,6 +40,7 @@ export default function UserGroupsScreen() {
     setEditingGroup(null);
     setName("");
     setSelectedUserIds([]);
+    setModalError(null);
     setShowModal(true);
   };
 
@@ -43,12 +48,18 @@ export default function UserGroupsScreen() {
     setEditingGroup(group);
     setName(group.name);
     setSelectedUserIds(group.members.map((m) => m.id));
+    setModalError(null);
     setShowModal(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    setModalError(null);
+
+    if (!name.trim()) {
+      setModalError("Informe o nome do grupo.");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -66,7 +77,7 @@ export default function UserGroupsScreen() {
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Erro ao salvar grupo.");
+      setModalError(parseApiError(err, "Erro ao salvar o grupo."));
     } finally {
       setSaving(false);
     }
@@ -78,17 +89,17 @@ export default function UserGroupsScreen() {
       await deleteGroup(groupId);
       await loadData();
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Erro ao excluir grupo.");
+      alert(parseApiError(err, "Erro ao excluir grupo."));
     }
   };
 
-  const toggleUserSelection = (userId: number) => {
-    if (selectedUserIds.includes(userId)) {
-      setSelectedUserIds(selectedUserIds.filter((id) => id !== userId));
-    } else {
-      setSelectedUserIds([...selectedUserIds, userId]);
-    }
-  };
+  const userOptions: AutocompleteOption[] = allUsers.map((u) => ({
+    id: u.id,
+    label: `${u.full_name} (@${u.username})`,
+    sublabel: u.email || `@${u.username}`,
+    badge: u.role === "admin" ? "Admin" : undefined,
+    type: "user",
+  }));
 
   return (
     <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-surface-50">
@@ -100,17 +111,24 @@ export default function UserGroupsScreen() {
               Grupos de Usuários
             </h2>
             <p className="text-sm text-surface-500 mt-1">
-              Crie grupos de usuários para facilitar o compartilhamento de tarefas em lote.
+              Crie grupos para organizar colaboradores e agilizar o compartilhamento de tarefas em lote.
             </p>
           </div>
           <button
             onClick={handleOpenCreate}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             Novo Grupo
           </button>
         </div>
+
+        {error && (
+          <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+            <div>{error}</div>
+          </div>
+        )}
 
         {loading ? (
           <div className="p-12 text-center text-sm text-surface-500">Carregando grupos...</div>
@@ -175,61 +193,75 @@ export default function UserGroupsScreen() {
         )}
       </div>
 
-      {/* Modal CRUD Grupo */}
+      {/* Modal CRUD Grupo com Autocomplete */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-surface-900">
-              {editingGroup ? "Editar Grupo" : "Novo Grupo"}
-            </h3>
-            <form onSubmit={handleSave} className="space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 md:p-8 shadow-2xl space-y-5 border border-surface-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600">
+                  <UserCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-surface-900">
+                    {editingGroup ? "Editar Grupo" : "Novo Grupo"}
+                  </h3>
+                  <p className="text-xs text-surface-500">Defina o nome e selecione os membros do grupo.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="rounded-xl p-2 text-surface-400 hover:bg-surface-100 hover:text-surface-600 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {modalError && (
+              <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                <div>{modalError}</div>
+              </div>
+            )}
+
+            <form onSubmit={handleSave} className="space-y-5">
               <div>
-                <label className="text-xs font-semibold text-surface-700">Nome do Grupo</label>
+                <label className="block text-xs font-semibold text-surface-700 mb-1">
+                  Nome do Grupo <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="ex: Time Frontend, Projeto Alpha"
+                  placeholder="ex: Equipe Frontend, Projetos Especiais"
                   required
-                  className="mt-1 block w-full rounded-xl border border-surface-200 px-3.5 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                  className="block w-full rounded-xl border border-surface-200 px-3.5 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-surface-700 mb-2 block">
-                  Selecionar Membros
-                </label>
-                <div className="max-h-48 overflow-y-auto rounded-xl border border-surface-200 p-2 space-y-1 bg-surface-50">
-                  {allUsers.map((u) => {
-                    const isSelected = selectedUserIds.includes(u.id);
-                    return (
-                      <div
-                        key={u.id}
-                        onClick={() => toggleUserSelection(u.id)}
-                        className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors ${
-                          isSelected ? "bg-indigo-100 text-indigo-900 font-semibold" : "bg-white text-surface-700 hover:bg-surface-100"
-                        }`}
-                      >
-                        <span>{u.full_name} (@{u.username})</span>
-                        {isSelected && <Check className="h-4 w-4 text-indigo-600" />}
-                      </div>
-                    );
-                  })}
-                </div>
+                <AutocompleteMultiSelect
+                  label="Buscar e Adicionar Membros"
+                  options={userOptions}
+                  selectedIds={selectedUserIds}
+                  onChange={(ids) => setSelectedUserIds(ids as number[])}
+                  placeholder="Digite o nome ou username para buscar um membro..."
+                  emptyMessage="Nenhum usuário encontrado para esta busca."
+                />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="rounded-xl border border-surface-200 px-4 py-2 text-sm font-semibold text-surface-600 hover:bg-surface-100"
+                  className="rounded-xl border border-surface-200 px-5 py-2.5 text-sm font-semibold text-surface-600 hover:bg-surface-100 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                  className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   {saving ? "Salvando..." : "Salvar Grupo"}
                 </button>

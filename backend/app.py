@@ -329,12 +329,15 @@ from .routes.admin import router as admin_router
 from .routes.groups import router as groups_router
 from .routes.shares import router as shares_router
 from .routes.tasks import router as tasks_router
+from .routes.users import router as users_router
 
 app.include_router(auth_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(groups_router, prefix="/api")
 app.include_router(shares_router, prefix="/api")
 app.include_router(tasks_router, prefix="/api")
+app.include_router(users_router, prefix="/api")
+
 
 
 # ── Health check ─────────────────────────────────────────────────────────
