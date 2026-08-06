@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Users, Plus, Trash2, Shield, User as UserIcon, Mail, Lock, AlertCircle, X, CheckCircle2 } from "lucide-react";
+import { Users, Plus, Trash2, Edit3, Shield, User as UserIcon, Mail, Lock, AlertCircle, X, CheckCircle2 } from "lucide-react";
 import type { User, UserRole } from "@/types/task";
 import { createUser, deleteUser, fetchUsers, parseApiError, updateUser } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
@@ -11,7 +11,7 @@ export default function UserManagementScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Form state
+  // Create Form state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -20,6 +20,16 @@ export default function UserManagementScreen() {
   const [role, setRole] = useState<UserRole>("user");
   const [saving, setSaving] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+
+  // Edit Form state
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editUsername, setEditUsername] = useState("");
+  const [editFullName, setEditFullName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [editRole, setEditRole] = useState<UserRole>("user");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editModalError, setEditModalError] = useState<string | null>(null);
 
   const roleOptions: CustomSelectOption<UserRole>[] = [
     {
@@ -63,11 +73,20 @@ export default function UserManagementScreen() {
     setShowCreateModal(true);
   };
 
+  const handleOpenEditModal = (user: User) => {
+    setEditingUser(user);
+    setEditUsername(user.username);
+    setEditFullName(user.full_name);
+    setEditEmail(user.email || "");
+    setEditPassword("");
+    setEditRole(user.role);
+    setEditModalError(null);
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalError(null);
 
-    // Client-side validations with friendly messages
     if (username.trim().length < 3) {
       setModalError("O nome de usuário deve ter pelo menos 3 caracteres.");
       return;
@@ -96,6 +115,42 @@ export default function UserManagementScreen() {
       setModalError(parseApiError(err, "Erro ao criar novo usuário. Verifique os dados fornecidos."));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setEditModalError(null);
+
+    if (editUsername.trim().length < 3) {
+      setEditModalError("O nome de usuário deve ter pelo menos 3 caracteres.");
+      return;
+    }
+    if (editFullName.trim().length < 2) {
+      setEditModalError("O nome completo deve ter pelo menos 2 caracteres.");
+      return;
+    }
+    if (editPassword && editPassword.length < 4) {
+      setEditModalError("A nova senha deve ter pelo menos 4 caracteres.");
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      await updateUser(editingUser.id, {
+        username: editUsername.trim(),
+        full_name: editFullName.trim(),
+        email: editEmail.trim() || null,
+        role: editRole,
+        ...(editPassword.trim() ? { password: editPassword } : {}),
+      });
+      setEditingUser(null);
+      await loadUsers();
+    } catch (err: any) {
+      setEditModalError(parseApiError(err, "Erro ao atualizar dados do usuário."));
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -137,7 +192,7 @@ export default function UserManagementScreen() {
               Gestão de Usuários (Admin)
             </h2>
             <p className="text-sm text-surface-500 mt-1">
-              Cadastre novos usuários, gerencie permissões e atribua papéis no sistema.
+              Cadastre novos usuários, edite informações, gerencie permissões e atribua papéis no sistema.
             </p>
           </div>
           <button
@@ -200,15 +255,24 @@ export default function UserManagementScreen() {
                           </button>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          {!isSelf && (
+                          <div className="flex items-center justify-end gap-1">
                             <button
-                              onClick={() => handleDeleteUser(u.id, u.full_name)}
-                              className="rounded-lg p-1.5 text-surface-400 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
-                              title="Excluir usuário"
+                              onClick={() => handleOpenEditModal(u)}
+                              className="rounded-lg p-1.5 text-surface-400 hover:bg-purple-50 hover:text-purple-600 transition-colors cursor-pointer"
+                              title="Editar usuário"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Edit3 className="h-4 w-4" />
                             </button>
-                          )}
+                            {!isSelf && (
+                              <button
+                                onClick={() => handleDeleteUser(u.id, u.full_name)}
+                                className="rounded-lg p-1.5 text-surface-400 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
+                                title="Excluir usuário"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -236,15 +300,24 @@ export default function UserManagementScreen() {
                           </span>
                         )}
                       </div>
-                      {!isSelf && (
+                      <div className="flex items-center gap-1">
                         <button
-                          onClick={() => handleDeleteUser(u.id, u.full_name)}
-                          className="rounded-lg p-1.5 text-surface-400 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
-                          title="Excluir usuário"
+                          onClick={() => handleOpenEditModal(u)}
+                          className="rounded-lg p-1.5 text-surface-400 hover:bg-purple-50 hover:text-purple-600 transition-colors cursor-pointer"
+                          title="Editar usuário"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Edit3 className="h-4 w-4" />
                         </button>
-                      )}
+                        {!isSelf && (
+                          <button
+                            onClick={() => handleDeleteUser(u.id, u.full_name)}
+                            className="rounded-lg p-1.5 text-surface-400 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
+                            title="Excluir usuário"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-1 text-xs">
@@ -274,10 +347,9 @@ export default function UserManagementScreen() {
             </div>
           </>
         )}
-
       </div>
 
-      {/* Modal Criar Usuário com Componentes Customizados */}
+      {/* Modal Criar Usuário */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-lg rounded-3xl bg-white p-6 md:p-8 shadow-2xl space-y-5 border border-surface-100">
@@ -404,6 +476,142 @@ export default function UserManagementScreen() {
                     <>
                       <CheckCircle2 className="h-4 w-4" />
                       Criar Usuário
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Usuário */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 md:p-8 shadow-2xl space-y-5 border border-surface-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-100 text-purple-600">
+                  <Edit3 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-surface-900">Editar Usuário</h3>
+                  <p className="text-xs text-surface-500">Altere os dados cadastrais e permissões de @{editingUser.username}.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingUser(null)}
+                className="rounded-xl p-2 text-surface-400 hover:bg-surface-100 hover:text-surface-600 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {editModalError && (
+              <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50/90 p-4 text-sm text-red-800 animate-in slide-in-from-top-2 duration-150">
+                <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                <div className="flex-1 font-medium">{editModalError}</div>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEditUser} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-surface-700 mb-1">
+                    Nome de Usuário <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-surface-400" />
+                    <input
+                      type="text"
+                      value={editUsername}
+                      onChange={(e) => setEditUsername(e.target.value)}
+                      required
+                      minLength={3}
+                      className="block w-full rounded-xl border border-surface-200 pl-10 pr-3.5 py-2.5 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-surface-700 mb-1">
+                    Redefinir Senha <span className="text-surface-400 font-normal">(opcional)</span>
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-surface-400" />
+                    <input
+                      type="password"
+                      value={editPassword}
+                      onChange={(e) => setEditPassword(e.target.value)}
+                      placeholder="Deixe em branco p/ manter"
+                      className="block w-full rounded-xl border border-surface-200 pl-10 pr-3.5 py-2.5 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-surface-700 mb-1">
+                  Nome Completo <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  required
+                  minLength={2}
+                  className="block w-full rounded-xl border border-surface-200 px-3.5 py-2.5 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-surface-700 mb-1">E-mail</label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-surface-400" />
+                  <input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    placeholder="usuario@empresa.com"
+                    className="block w-full rounded-xl border border-surface-200 pl-10 pr-3.5 py-2.5 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <CustomSelect<UserRole>
+                  label="Função e Permissões no Sistema"
+                  options={roleOptions}
+                  value={editRole}
+                  onChange={(val) => setEditRole(val)}
+                  disabled={currentUser?.id === editingUser.id}
+                />
+                {currentUser?.id === editingUser.id && (
+                  <span className="text-[11px] text-amber-600 mt-1 block">
+                    Não é possível alterar a própria função de administrador.
+                  </span>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="rounded-xl border border-surface-200 px-5 py-2.5 text-sm font-semibold text-surface-600 hover:bg-surface-100 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSaving}
+                  className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-purple-700 disabled:opacity-50 transition-colors cursor-pointer"
+                >
+                  {editSaving ? (
+                    "Salvando..."
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      Salvar Alterações
                     </>
                   )}
                 </button>
