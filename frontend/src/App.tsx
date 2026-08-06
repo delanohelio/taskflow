@@ -21,6 +21,10 @@ import CalendarView from "@/components/board/CalendarView";
 import UserManagementScreen from "@/components/modals/UserManagementScreen";
 import UserGroupsScreen from "@/components/modals/UserGroupsScreen";
 import InvitationsScreen from "@/components/modals/InvitationsScreen";
+import StatsScreen from "@/components/board/StatsScreen";
+import NotificationDropdown from "@/components/layout/NotificationDropdown";
+import * as api from "@/services/api";
+
 
 function TaskFlowMain() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -195,7 +199,7 @@ function TaskFlowMain() {
       {/* Main content */}
       <main className="flex flex-1 flex-col overflow-hidden w-full">
         {/* Top bar */}
-        <header className="flex-shrink-0 border-b border-surface-200 bg-white/80 px-4 md:px-8 py-4 backdrop-blur-sm flex items-center gap-3">
+        <header className="flex-shrink-0 border-b border-surface-200 bg-white/80 px-4 md:px-8 py-4 backdrop-blur-sm flex items-center justify-between gap-3">
           <button
             onClick={() => setSidebarOpen(true)}
             className="md:hidden rounded-lg p-2 hover:bg-surface-100 transition-colors"
@@ -206,6 +210,20 @@ function TaskFlowMain() {
           <div className="flex-1 min-w-0">
             <DailyReviewBanner review={review} />
           </div>
+          <NotificationDropdown
+            onNotificationClick={async (taskId) => {
+              if (taskId) {
+                try {
+                  const t = await api.fetchTask(taskId);
+                  setSelectedTask(t);
+                } catch {
+                  refreshBoard();
+                }
+              } else {
+                refreshBoard();
+              }
+            }}
+          />
         </header>
 
         {/* Dynamic Screen Area */}
@@ -236,6 +254,8 @@ function TaskFlowMain() {
               />
             </div>
           )}
+          {activeScreen === "stats" && <StatsScreen />}
+
           {activeScreen === "standby" && (
             <div className="p-8">
               <StandbyScreen

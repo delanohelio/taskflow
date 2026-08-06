@@ -16,6 +16,7 @@ interface CustomSelectProps<T extends string = string> {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  dropdownPosition?: "auto" | "down" | "up";
 }
 
 export function CustomSelect<T extends string = string>({
@@ -26,8 +27,10 @@ export function CustomSelect<T extends string = string>({
   placeholder = "Selecione uma opção...",
   className = "",
   disabled = false,
+  dropdownPosition = "auto",
 }: CustomSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUp, setOpenUp] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
@@ -42,13 +45,29 @@ export function CustomSelect<T extends string = string>({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleToggle = () => {
+    if (disabled) return;
+    if (!isOpen && dropdownPosition !== "down") {
+      if (dropdownPosition === "up") {
+        setOpenUp(true);
+      } else if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        setOpenUp(spaceBelow < 220);
+      }
+    } else {
+      setOpenUp(false);
+    }
+    setIsOpen(!isOpen);
+  };
+
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       {label && <label className="block text-xs font-semibold text-surface-700 mb-1">{label}</label>}
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className={`flex w-full items-center justify-between gap-2 rounded-xl border border-surface-200 bg-white px-3.5 py-2 text-sm text-surface-900 transition-all hover:border-surface-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none ${
           disabled ? "opacity-60 cursor-not-allowed bg-surface-50" : "cursor-pointer"
         }`}
@@ -61,7 +80,12 @@ export function CustomSelect<T extends string = string>({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1.5 w-full rounded-2xl border border-surface-200 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100">
+        <div
+          className={`absolute left-0 z-50 w-full rounded-2xl border border-surface-200 bg-white p-1.5 shadow-2xl animate-in fade-in zoom-in-95 duration-100 min-w-[140px] ${
+            openUp ? "bottom-full mb-1.5" : "top-full mt-1.5"
+          }`}
+        >
+
           <div className="max-h-60 overflow-y-auto space-y-0.5">
             {options.map((opt) => {
               const isSelected = opt.value === value;

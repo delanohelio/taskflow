@@ -11,7 +11,9 @@ from ..auth import (
 )
 from ..database import get_db
 from ..models.user import User
+from ..models.user_settings import UserSettings
 from ..schemas.user import LoginRequest, LoginResponse, ProfileUpdate, UserResponse
+from ..schemas.user_settings import UserSettingsResponse, UserSettingsUpdate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -57,3 +59,36 @@ def update_profile(
     db.commit()
     db.refresh(current_user)
     return UserResponse.model_validate(current_user)
+
+
+@router.get("/settings", response_model=UserSettingsResponse)
+def get_user_settings(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get per-user settings."""
+    if not current_user.settings:
+        st = UserSettings(user_id=current_user.id, auto_archive_minutes=None)
+        db.add(st)
+        db.commit()
+        db.refresh(st)
+        return UserSettingsResponse.model_validate(st)
+    return UserSettingsResponse.model_validate(current_user.settings)
+
+
+@router.patch("/settings", response_model=UserSettingsResponse)
+def update_user_settings(
+    payload: UserSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update per-user settings."""
+    st = current_user.settings
+    if not st:
+        st = UserSettings(user_id=current_user.id, auto_archive_minutes=payload.auto_archive_minutes)
+        db.add(st)
+    else:
+        st.auto_archive_minutes = payload.auto_archive_minutes
+    db.commit()
+    db.refresh(st)
+    return UserSettingsResponse.model_validate(st)

@@ -159,62 +159,122 @@ export default function UserManagementScreen() {
         {loading ? (
           <div className="p-12 text-center text-sm text-surface-500">Carregando usuários...</div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-xs">
-            <table className="w-full text-left text-sm text-surface-600">
-              <thead className="border-b border-surface-200 bg-surface-50 text-xs font-semibold text-surface-500 uppercase tracking-wider">
-                <tr>
-                  <th className="px-6 py-3.5">Usuário</th>
-                  <th className="px-6 py-3.5">Nome Completo</th>
-                  <th className="px-6 py-3.5">E-mail</th>
-                  <th className="px-6 py-3.5">Função</th>
-                  <th className="px-6 py-3.5 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-100">
-                {users.map((u) => {
-                  const isSelf = currentUser?.id === u.id;
-                  return (
-                    <tr key={u.id} className="hover:bg-surface-50 transition-colors">
-                      <td className="px-6 py-4 font-semibold text-surface-900 flex items-center gap-2">
-                        <UserIcon className="h-4 w-4 text-surface-400" />
-                        @{u.username} {isSelf && <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">(Você)</span>}
-                      </td>
-                      <td className="px-6 py-4">{u.full_name}</td>
-                      <td className="px-6 py-4 text-surface-500">{u.email || "—"}</td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => handleToggleRole(u)}
-                          disabled={isSelf}
-                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-colors ${
-                            isSelf
-                              ? "opacity-60 cursor-not-allowed bg-purple-100 text-purple-800"
-                              : u.role === "admin"
-                              ? "bg-purple-100 text-purple-800 hover:bg-purple-200 cursor-pointer"
-                              : "bg-surface-100 text-surface-700 hover:bg-surface-200 cursor-pointer"
-                          }`}
-                        >
-                          <Shield className="h-3.5 w-3.5" />
-                          {u.role === "admin" ? "Administrador" : "Usuário Comum"}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {!isSelf && (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto rounded-2xl border border-surface-200 bg-white shadow-xs">
+              <table className="w-full text-left text-sm text-surface-600 min-w-[640px]">
+                <thead className="border-b border-surface-200 bg-surface-50 text-xs font-semibold text-surface-500 uppercase tracking-wider">
+                  <tr>
+                    <th className="px-6 py-3.5">Usuário</th>
+                    <th className="px-6 py-3.5">Nome Completo</th>
+                    <th className="px-6 py-3.5">E-mail</th>
+                    <th className="px-6 py-3.5">Função</th>
+                    <th className="px-6 py-3.5 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-100">
+                  {users.map((u) => {
+                    const isSelf = currentUser?.id === u.id;
+                    return (
+                      <tr key={u.id} className="hover:bg-surface-50 transition-colors">
+                        <td className="px-6 py-4 font-semibold text-surface-900 flex items-center gap-2">
+                          <UserIcon className="h-4 w-4 text-surface-400" />
+                          @{u.username} {isSelf && <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">(Você)</span>}
+                        </td>
+                        <td className="px-6 py-4">{u.full_name}</td>
+                        <td className="px-6 py-4 text-surface-500">{u.email || "—"}</td>
+                        <td className="px-6 py-4">
                           <button
-                            onClick={() => handleDeleteUser(u.id, u.full_name)}
-                            className="rounded-lg p-1.5 text-surface-400 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
-                            title="Excluir usuário"
+                            onClick={() => handleToggleRole(u)}
+                            disabled={isSelf}
+                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-colors ${
+                              isSelf
+                                ? "opacity-60 cursor-not-allowed bg-purple-100 text-purple-800"
+                                : u.role === "admin"
+                                ? "bg-purple-100 text-purple-800 hover:bg-purple-200 cursor-pointer"
+                                : "bg-surface-100 text-surface-700 hover:bg-surface-200 cursor-pointer"
+                            }`}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Shield className="h-3.5 w-3.5" />
+                            {u.role === "admin" ? "Administrador" : "Usuário Comum"}
                           </button>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {!isSelf && (
+                            <button
+                              onClick={() => handleDeleteUser(u.id, u.full_name)}
+                              className="rounded-lg p-1.5 text-surface-400 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
+                              title="Excluir usuário"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile / Tablet Card View */}
+            <div className="block lg:hidden space-y-3">
+              {users.map((u) => {
+                const isSelf = currentUser?.id === u.id;
+                return (
+                  <div
+                    key={u.id}
+                    className="rounded-2xl border border-surface-200 bg-white p-4 shadow-2xs space-y-3"
+                  >
+                    <div className="flex items-center justify-between gap-2 border-b border-surface-100 pb-2.5">
+                      <div className="flex items-center gap-2 font-bold text-surface-900">
+                        <UserIcon className="h-4 w-4 text-purple-600" />
+                        <span>@{u.username}</span>
+                        {isSelf && (
+                          <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                            (Você)
+                          </span>
                         )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                      {!isSelf && (
+                        <button
+                          onClick={() => handleDeleteUser(u.id, u.full_name)}
+                          className="rounded-lg p-1.5 text-surface-400 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
+                          title="Excluir usuário"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      <div className="text-surface-800 font-semibold text-sm">{u.full_name}</div>
+                      {u.email && <div className="text-surface-500">{u.email}</div>}
+                    </div>
+
+                    <div className="pt-1">
+                      <button
+                        onClick={() => handleToggleRole(u)}
+                        disabled={isSelf}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-colors ${
+                          isSelf
+                            ? "opacity-60 cursor-not-allowed bg-purple-100 text-purple-800"
+                            : u.role === "admin"
+                            ? "bg-purple-100 text-purple-800 hover:bg-purple-200 cursor-pointer"
+                            : "bg-surface-100 text-surface-700 hover:bg-surface-200 cursor-pointer"
+                        }`}
+                      >
+                        <Shield className="h-3.5 w-3.5" />
+                        {u.role === "admin" ? "Administrador" : "Usuário Comum"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
+
       </div>
 
       {/* Modal Criar Usuário com Componentes Customizados */}

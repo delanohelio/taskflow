@@ -150,3 +150,46 @@ export interface DailyReview {
   today_tasks: Task[];
   overdue_tasks: Task[];
 }
+
+// ── Settings, Notifications & Stats ──────────────────────────────────────
+
+export interface UserSettings {
+  id: number;
+  user_id: number;
+  auto_archive_minutes: number | null;
+}
+
+export interface Notification {
+  id: number;
+  user_id: number;
+  title: string;
+  message: string;
+  type: "invitation" | "subtask_assigned" | "due_soon" | "overdue" | "info";
+  link_task_id: number | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface UserStats {
+  total_tasks: number;
+  completed_tasks: number;
+  completed_on_time: number;
+  overdue_tasks: number;
+  standby_tasks: number;
+  subtasks_total: number;
+  subtasks_completed: number;
+  completion_rate_percent: number;
+  on_time_rate_percent: number;
+  by_priority: {
+    high: number;
+    normal: number;
+    low: number;
+  };
+  by_status: {
+    todo: number;
+    doing: number;
+    done: number;
+    standby: number;
+  };
+}
+

@@ -1,7 +1,10 @@
-# Step 1: Build stage
 FROM node:20-alpine AS builder
 
+ARG VITE_APP_VERSION=v1.0.0
+ENV VITE_APP_VERSION=$VITE_APP_VERSION
+
 WORKDIR /app
+
 
 # Copy package files
 COPY package.json package-lock.json ./

@@ -16,7 +16,11 @@ import type {
   UpdateUserPayload,
   User,
   UserGroup,
+  UserSettings,
+  Notification,
+  UserStats,
 } from "@/types/task";
+
 import { API_BASE_URL } from "@/utils/constants";
 
 const api = axios.create({
@@ -284,3 +288,39 @@ export async function importBackup(backupData: any): Promise<{ status: string; i
   const { data } = await api.post<{ status: string; imported_count: number }>("/backup/import", backupData);
   return data;
 }
+
+// ── Notifications, Stats, Leave Task & Per-User Settings ────────────────
+
+export async function leaveSharedTask(taskId: number): Promise<void> {
+  await api.post(`/shares/leave/${taskId}`);
+}
+
+export async function fetchUserPersonalSettings(): Promise<UserSettings> {
+  const { data } = await api.get<UserSettings>("/auth/settings");
+  return data;
+}
+
+export async function updateUserPersonalSettings(payload: { auto_archive_minutes: number | null }): Promise<UserSettings> {
+  const { data } = await api.patch<UserSettings>("/auth/settings", payload);
+  return data;
+}
+
+export async function fetchUserStats(): Promise<UserStats> {
+  const { data } = await api.get<UserStats>("/stats");
+  return data;
+}
+
+export async function fetchUserNotifications(): Promise<Notification[]> {
+  const { data } = await api.get<Notification[]>("/notifications");
+  return data;
+}
+
+export async function markNotificationAsRead(id: number): Promise<Notification> {
+  const { data } = await api.patch<Notification>(`/notifications/${id}/read`);
+  return data;
+}
+
+export async function markAllNotificationsAsRead(): Promise<void> {
+  await api.post("/notifications/read-all");
+}
+

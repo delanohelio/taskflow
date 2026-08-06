@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .task import Base
 
@@ -25,6 +25,10 @@ class User(Base):
         DateTime,
         default=lambda: datetime.now(timezone.utc),
     )
+
+    settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username='{self.username}', role='{self.role}')>"

@@ -15,6 +15,8 @@ import {
   Users,
   UserCheck,
   Mail,
+  BarChart3,
+
 } from "lucide-react";
 import type { BoardData, Task } from "@/types/task";
 import { formatStartDateTime, formatDueDate } from "@/utils/helpers";
@@ -29,7 +31,9 @@ export type ScreenType =
   | "archived"
   | "users"
   | "groups"
-  | "invitations";
+  | "invitations"
+  | "stats";
+
 
 interface SidebarProps {
   board: BoardData;
@@ -78,6 +82,8 @@ export default function Sidebar({
   const overdueCount = board.overdue.length;
   const standbyCount = board.standby.length;
 
+  const appVersion = import.meta.env.VITE_APP_VERSION || "v1.0.0";
+
   return (
     <>
       {/* Mobile sidebar backdrop overlay */}
@@ -99,12 +105,18 @@ export default function Sidebar({
             <Zap className="h-4 w-4 text-white" />
           </div>
           <div>
-            <h1 className="text-base font-bold tracking-tight text-surface-900">
-              TaskFlow
-            </h1>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-base font-bold tracking-tight text-surface-900">
+                TaskFlow
+              </h1>
+              <span className="rounded-md bg-purple-100 px-1.5 py-0.2 text-[10px] font-extrabold text-purple-700 border border-purple-200">
+                {appVersion}
+              </span>
+            </div>
             <p className="text-[11px] text-surface-400">Kanban Temporal</p>
           </div>
         </div>
+
 
         {/* New task button */}
         <div className="px-4 py-4">
@@ -150,6 +162,17 @@ export default function Sidebar({
               <Calendar className="h-4 w-4" />
               <span>Calendário</span>
             </button>
+
+            <button
+              onClick={() => onChangeScreen("stats")}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-surface-100 ${
+                activeScreen === "stats" ? "sidebar-item-active" : "text-surface-600"
+              }`}
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span>Estatísticas</span>
+            </button>
+
 
             <button
               onClick={() => onChangeScreen("standby")}

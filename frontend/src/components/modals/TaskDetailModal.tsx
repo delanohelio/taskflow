@@ -18,7 +18,12 @@ import {
   User as UserIcon,
   UserPlus,
   Users,
+  LogOut,
+  ListTodo,
+  PlayCircle,
 } from "lucide-react";
+
+
 import type { Task, CreateTaskPayload, Priority, UpdateTaskPayload, User, UserGroup } from "@/types/task";
 import { PRIORITY_CONFIG } from "@/utils/constants";
 import { formatDueDate, formatStartDateTime } from "@/utils/helpers";
@@ -123,6 +128,17 @@ export default function TaskDetailModal({
       console.error("Erro ao carregar lista para compartilhamento", err);
     }
   };
+
+  async function handleLeaveTask() {
+    if (!window.confirm("Deseja realmente sair desta atividade compartilhada? Seu acesso e delegações serão removidos.")) return;
+    try {
+      await api.leaveSharedTask(task.id);
+      onClose();
+    } catch (err: any) {
+      alert(api.parseApiError(err, "Erro ao sair da atividade."));
+    }
+  }
+
 
 
   async function handleSave() {
@@ -251,11 +267,11 @@ export default function TaskDetailModal({
     >
       <div className="modal-content w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-2xl overflow-y-auto rounded-none sm:rounded-2xl border border-surface-200 bg-white shadow-2xl">
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-surface-100 bg-white/95 px-6 py-4 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <PriorityIndicator priority={task.priority} showLabel />
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-surface-100 bg-white/95 px-4 sm:px-6 py-3 sm:py-4 backdrop-blur-sm">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <PriorityIndicator priority={task.priority} showLabel hideLabelOnMobile />
             <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+              className={`inline-flex items-center gap-1 rounded-full px-2 sm:px-2.5 py-0.5 text-xs font-semibold shrink-0 ${
                 task.status === "done"
                   ? "bg-emerald-100 text-emerald-700"
                   : task.status === "doing"
@@ -264,48 +280,76 @@ export default function TaskDetailModal({
                   ? "bg-amber-100 text-amber-700"
                   : "bg-surface-100 text-surface-600"
               }`}
+              title={`Status: ${
+                task.status === "standby"
+                  ? "Stand-by"
+                  : task.status === "todo"
+                  ? "Para Fazer"
+                  : task.status === "doing"
+                  ? "Em Andamento"
+                  : "Concluído"
+              }`}
             >
-              {task.status === "standby"
-                ? "Stand-by"
-                : task.status === "todo"
-                ? "Para Fazer"
-                : task.status === "doing"
-                ? "Em Andamento"
-                : "Concluído"}
+              {task.status === "standby" && <Clock className="h-3.5 w-3.5 shrink-0 text-amber-600" />}
+              {task.status === "todo" && <ListTodo className="h-3.5 w-3.5 shrink-0 text-slate-600" />}
+              {task.status === "doing" && <PlayCircle className="h-3.5 w-3.5 shrink-0 text-blue-600" />}
+              {task.status === "done" && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />}
+
+              <span className="hidden sm:inline">
+                {task.status === "standby"
+                  ? "Stand-by"
+                  : task.status === "todo"
+                  ? "Para Fazer"
+                  : task.status === "doing"
+                  ? "Em Andamento"
+                  : "Concluído"}
+              </span>
             </span>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             {/* Share button (only for owner) */}
             {!task.is_shared_with_me && (
               <button
                 onClick={openShareModal}
-                className="flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors cursor-pointer"
+                className="flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2 sm:px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors cursor-pointer"
                 title="Compartilhar atividade"
               >
-                <Share2 className="h-3.5 w-3.5" />
-                <span>Compartilhar</span>
+                <Share2 className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden md:inline">Compartilhar</span>
+              </button>
+            )}
+
+            {/* Leave shared task button (only for guest) */}
+            {task.is_shared_with_me && (
+              <button
+                onClick={handleLeaveTask}
+                className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 sm:px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
+                title="Sair desta atividade compartilhada"
+              >
+                <LogOut className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden md:inline">Sair</span>
               </button>
             )}
 
             {/* Explicit Edit Button before Archive Button */}
             <button
               onClick={() => setIsEditing(!isEditing)}
-              className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer border ${
+              className={`flex items-center gap-1 rounded-lg px-2 sm:px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer border ${
                 isEditing
                   ? "bg-brand-100 text-brand-800 border-brand-300"
                   : "bg-surface-100 text-surface-700 border-surface-200 hover:bg-surface-200"
               }`}
               title="Editar atividade"
             >
-              <Edit3 className="h-3.5 w-3.5" />
-              <span>{isEditing ? "Cancel Edit" : "Editar"}</span>
+              <Edit3 className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden md:inline">{isEditing ? "Cancelar" : "Editar"}</span>
             </button>
 
             {/* Archive button */}
             <button
               onClick={handleArchiveToggle}
-              className={`rounded-lg p-2 transition-colors ${
+              className={`rounded-lg p-1.5 sm:p-2 transition-colors cursor-pointer ${
                 task.archived
                   ? "bg-amber-50 text-amber-600 hover:bg-amber-100"
                   : "text-surface-400 hover:bg-surface-100 hover:text-surface-600"
@@ -319,7 +363,7 @@ export default function TaskDetailModal({
             {!task.is_shared_with_me && (
               <button
                 onClick={handleDelete}
-                className="rounded-lg p-2 text-surface-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                className="rounded-lg p-1.5 sm:p-2 text-surface-400 transition-colors hover:bg-red-50 hover:text-red-500 cursor-pointer"
                 title="Excluir tarefa"
               >
                 <Trash2 className="h-4 w-4" />
@@ -328,12 +372,13 @@ export default function TaskDetailModal({
 
             <button
               onClick={onClose}
-              className="rounded-lg p-2 text-surface-400 transition-colors hover:bg-surface-100"
+              className="rounded-lg p-1.5 sm:p-2 text-surface-400 transition-colors hover:bg-surface-100 cursor-pointer"
               aria-label="Fechar"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
+
         </div>
 
         <div className="p-6">

@@ -2,250 +2,92 @@
 name: taskflow-api
 description: |
   Gerenciar tarefas no TaskFlow usando sua API HTTP/REST local (FastAPI).
-  Permite consultar o board, obter revisão diária, criar e atualizar tarefas,
-  adicionar subtarefas, promover tarefas standby e exibir saídas em tabelas e listas markdown formatadas.
+  Permite consultar o board, obter revisão diária, estatísticas, notificações,
+  criar e atualizar tarefas, gerenciar usuários/grupos, aceitar/sair de convites de compartilhamento.
 ---
 
 # Skill: TaskFlow API Manager
 
-Esta skill fornece instruções e templates para interagir com o servidor de backend do TaskFlow (`http://localhost:8000/api`) usando chamadas de terminal (`curl`) e formatar as respostas de forma visualmente rica para o usuário.
+Esta skill fornece instruções e templates para interagir com o servidor de backend do TaskFlow (`http://localhost:8000/api`) usando chamadas de terminal (`curl`) e autenticação JWT.
 
 ---
 
-## 1. Configuração e Variáveis
+## 1. Configuração e Autenticação JWT
 
 A URL base padrão da API é:
 `http://localhost:8000/api`
 
+### Autenticar e Obter Token JWT
+```bash
+curl -s -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "<usuario>", "password": "<senha>"}'
+```
+Adicione o cabeçalho `Authorization: Bearer <TOKEN>` nas requisições protegidas.
+
 ---
 
-## 2. Templates de Entrada de Dados (API Payloads)
+## 2. Endpoints e Exemplos curl
 
-Use os seguintes templates `curl` para executar ações no TaskFlow. Substitua os placeholders indicados por `<valor>`.
-
-### A. Criar Nova Tarefa Principal
-Se `start_datetime` for no futuro, o status será automaticamente definido como `standby`.
-
+### A. Estatísticas e Desempenho
 ```bash
-curl -s -X POST http://localhost:8000/api/tasks \
+curl -s http://localhost:8000/api/stats \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+### B. Notificações do Usuário
+```bash
+# Listar notificações
+curl -s http://localhost:8000/api/notifications \
+  -H "Authorization: Bearer <TOKEN>"
+
+# Marcar todas como lidas
+curl -s -X POST http://localhost:8000/api/notifications/read-all \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+### C. Compartilhamento e Convites
+```bash
+# Enviar convite de compartilhamento (Usuários ou Grupos)
+curl -s -X POST http://localhost:8000/api/tasks/<id_tarefa>/share \
+  -H "Authorization: Bearer <TOKEN>" \
   -H "Content-Type: application/json" \
-  -d '{
-    "title": "<Título da tarefa>",
-    "description": "<Descrição detalhada ou null>",
-    "start_datetime": "<ISO-8601 ex: 2026-07-05T10:00:00 ou null>",
-    "due_date": "<YYYY-MM-DD ex: 2026-07-03 ou null>",
-    "priority": "<low | normal | high>",
-    "tags": ["<tag1>", "<tag2>"]
-  }'
+  -d '{"user_ids": [2], "group_ids": [1]}'
+
+# Aceitar convite
+curl -s -X POST http://localhost:8000/api/shares/<id_convite>/accept \
+  -H "Authorization: Bearer <TOKEN>"
+
+# Sair de uma tarefa compartilhada (Convidado)
+curl -s -X POST http://localhost:8000/api/shares/leave/<id_tarefa> \
+  -H "Authorization: Bearer <TOKEN>"
 ```
 
-### B. Adicionar Subtarefa (Tarefa Filha)
-Vincule uma subtarefa informando o `parent_id` da tarefa pai correspondente.
-
+### D. Perfil e Configurações Individuais
 ```bash
-curl -s -X POST http://localhost:8000/api/tasks \
+# Atualizar perfil (Nome, E-mail, Senha)
+curl -s -X PATCH http://localhost:8000/api/auth/profile \
+  -H "Authorization: Bearer <TOKEN>" \
   -H "Content-Type: application/json" \
-  -d '{
-    "title": "<Título da subtarefa>",
-    "priority": "normal",
-    "tags": [],
-    "parent_id": <id_da_tarefa_pai>
-  }'
-```
+  -d '{"full_name": "Novo Nome", "email": "email@teste.com"}'
 
-### C. Atualizar uma Tarefa / Subtarefa (Edição)
-Edite parcialmente qualquer tarefa passando apenas os campos modificados.
-
-```bash
-curl -s -X PATCH http://localhost:8000/api/tasks/<id_da_tarefa> \
+# Atualizar preferências de auto-arquivamento individual
+curl -s -X PATCH http://localhost:8000/api/auth/settings \
+  -H "Authorization: Bearer <TOKEN>" \
   -H "Content-Type: application/json" \
-  -d '{
-    "title": "<Novo título>",
-    "description": "<Nova descrição>",
-    "priority": "<low | normal | high>",
-    "due_date": "<YYYY-MM-DD>",
-    "archived": <true | false>
-  }'
-```
-
-### D. Mover Tarefa entre Colunas (Kanban)
-Use este endpoint dedicado para arrastar tarefas ativas entre as colunas do board.
-
-```bash
-curl -s -X PATCH http://localhost:8000/api/tasks/<id_da_tarefa>/status \
-  -H "Content-Type: application/json" \
-  -d '{
-    "status": "<todo | doing | done>"
-  }'
-```
-
-### E. Excluir uma Tarefa ou Subtarefa
-*Nota: Excluir uma tarefa pai excluirá automaticamente todas as suas subtarefas em cascata.*
-
-```bash
-curl -s -X DELETE http://localhost:8000/api/tasks/<id_da_tarefa>
-```
-
-### F. Forçar Gatilho Temporal
-Dispare a promoção em lote de todas as tarefas standby elegíveis (cujo `start_datetime` já passou).
-
-```bash
-curl -s -X POST http://localhost:8000/api/tasks/trigger-temporal
-```
-
-### G. Promover uma Tarefa Standby para Execução Imediata
-Promova manualmente uma tarefa agendada (standby) limpando seu início (`start_datetime: null`) e mudando o status para `todo`.
-
-```bash
-curl -s -X PATCH http://localhost:8000/api/tasks/<id_da_tarefa> \
-  -H "Content-Type: application/json" \
-  -d '{
-    "status": "todo",
-    "start_datetime": null
-  }'
-```
-
-### H. Arquivar / Desarquivar uma Tarefa
-Arquive uma tarefa (definindo `archived: true`) para ocultá-la das telas ativas, ou desarquive (definindo `archived: false`).
-
-```bash
-curl -s -X PATCH http://localhost:8000/api/tasks/<id_da_tarefa> \
-  -H "Content-Type: application/json" \
-  -d '{
-    "archived": true
-  }'
-```
-
-### I. Exportar Backup
-Obtenha o backup completo do sistema em formato JSON.
-
-```bash
-curl -s http://localhost:8000/api/backup/export > taskflow_backup.json
-```
-
-### J. Importar / Restaurar Backup
-Restaure o banco de dados e as configurações enviando o arquivo `.json` de backup.
-
-```bash
-curl -s -X POST http://localhost:8000/api/backup/import \
-  -H "Content-Type: application/json" \
-  -d @taskflow_backup.json
-```
-
-### K. Consultar e Atualizar Configurações
-Obtenha ou modifique as configurações globais da aplicação (como o tempo de auto-arquivamento em minutos).
-
-```bash
-# Consultar configurações
-curl -s http://localhost:8000/api/settings
-
-# Atualizar auto-arquivamento (ex: 60 minutos)
-curl -s -X PATCH http://localhost:8000/api/settings \
-  -H "Content-Type: application/json" \
-  -d '{"auto_archive_after_minutes": 60}'
-```
-
-### L. Verificar Autenticação de Senha
-Verifique se a senha é exigida ou valide a senha informada.
-
-```bash
-# Verificar se senha é exigida
-curl -s http://localhost:8000/api/auth/config
-
-# Validar senha do painel
-curl -s -X POST http://localhost:8000/api/auth/verify \
-  -H "Content-Type: application/json" \
-  -d '{"password": "<sua_senha>"}'
+  -d '{"auto_archive_minutes": 1440}'
 ```
 
 ---
 
+## 3. Visualização de Saída (Markdown)
 
-## 3. Templates de Visualização de Saída (Markdown)
+### A. Painel de Estatísticas
+Renderize os dados obtidos de `GET /api/stats` em um bloco de resumo analítico:
 
-Ao ler as respostas em JSON da API do TaskFlow, formate os dados usando os templates estruturados abaixo para exibi-los ao usuário final em Markdown limpo e fácil de ler.
-
-### A. Resumo da Revisão Diária (Banner)
-Colete as informações de `GET /api/tasks/review` e renderize um bloco de resumo baseado na urgência:
-
-*Se houver tarefas atrasadas:*
-> [!WARNING]
-> ### 📋 Revisão Diária: Atenção Requerida
-> Você tem **<today_count>** tarefas para hoje e **<overdue_count>** tarefas atrasadas!
->
-> **Tarefas Atrasadas:**
-> - [ ] `#<id>` **<title>** (Venceu em: `<due_date>`) — *Prioridade: `<priority>`*
-
-*Se tudo estiver em dia:*
 > [!NOTE]
-> ### 🌟 Revisão Diária: Tudo em dia!
-> Você tem **<today_count>** tarefas para hoje e nenhuma tarefa atrasada.
-
----
-
-### B. Visualização do Quadro Kanban (Sem Tabelas)
-Colete as informações de `GET /api/tasks/board` e renderize em formato de árvore usando marcadores visuais. É a forma ideal para visualização em canais ou bots do Telegram:
-
-**📥 PARA FAZER (`todo`)**
-├─ 🟥 **#`<id>` `<title>`** (Entrega: `<due_date | "Não definida">`)
-│  🔥 *Prioridade:* `<priority>` • 🏷️ `[<tags>]`
-├─ ...
-└─ *(Fim da lista)*
-
-**⚙️ EM ANDAMENTO (`doing`)**
-├─ 🟧 **#`<id>` `<title>`** (Entrega: `<due_date | "Não definida">`)
-│  🔥 *Prioridade:* `<priority>` • 🏷️ `[<tags>]`
-└─ *(Fim da lista)*
-
-**✅ CONCLUÍDO (`done`)**
-├─ 🟩 **#`<id>` `<title>`**
-│  🏷️ `[<tags>]`
-└─ *(Fim da lista)*
-
-> Exemplo: Para detalhar, editar ou adicionar subtarefas, use a rota `/api/tasks/{id}`.
-
----
-
-### C. Visualização de Stand-by e Agendamentos (Sem Tabelas)
-Colete a chave `"standby"` de `GET /api/tasks/board` e liste-as organizadas cronologicamente por liberação:
-
-⏰ **TAREFAS EM STAND-BY (AGENDADAS)**
-├─ ⏳ **#`<id>` `<title>`**
-│  ⏰ *Liberação em:* `<start_datetime>`
-│  🔥 *Prioridade:* `<priority>` • 🏷️ `[<tags>]`
-├─ ...
-└─ *(Fim da lista)*
-
----
-
-### D. Detalhes de Tarefa com Checklist de Subtarefas
-Ao exibir os detalhes de uma tarefa principal obtidos de `GET /api/tasks/{id}`:
-
-### 📑 Tarefa #`<id>`: `<title>`
-* **Status:** `<status>`
-* **Prioridade:** `<priority>`
-* **Data de Entrega:** `<due_date | "Não definida">`
-* **Início Agendado:** `<start_datetime | "Imediato">`
-* **Arquivada:** `<"Sim" | "Não">`
-* **Tags:** `<tag_list | "Nenhuma">`
-
-**Descrição:**
-> `<description | "Sem descrição adicional.">`
-
-**Progresso das Subtarefas:** `[<subtasks_done>/<subtasks_total>]`
-```
-[bar-progresso-visual: <=========> 100%]
-```
-- [x] `#<sub_id>` **<sub_title>** (Concluída)
-- [ ] `#<sub_id>` **<sub_title>** (Pendente)
-
----
-
-### E. Visualização de Tarefas Arquivadas (Sem Tabelas)
-Colete as tarefas arquivadas por `GET /api/tasks?archived=true` e renderize a lista:
-
-📦 **TAREFAS ARQUIVADAS**
-├─ 📦 **#`<id>` `<title>`** (Vencimento: `<due_date | "Não definido">`)
-│  🏷️ `[<tags>]` • 🗄️ *Status original:* `<status>`
-├─ ...
-└─ *(Fim da lista)*
+> ### 📊 Desempenho do Usuário
+> - **Total de Tarefas:** `<total_tasks>`
+> - **Concluídas:** `<completed_tasks>` (`<completion_rate_percent>%`)
+> - **Entregues no Prazo:** `<completed_on_time>` (`<on_time_rate_percent>%`)
+> - **Atrasadas:** `<overdue_tasks>`

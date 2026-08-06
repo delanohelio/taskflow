@@ -6,7 +6,7 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from .models import Base, User, Task, UserGroup, TaskShare
+from .models import Base, User, Task, UserGroup, TaskShare, UserSettings, Notification
 
 # ── Database location ────────────────────────────────────────────────────
 # Default: tasks.db alongside this file.  Override with DB_PATH env var.

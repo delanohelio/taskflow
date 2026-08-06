@@ -330,6 +330,8 @@ from .routes.groups import router as groups_router
 from .routes.shares import router as shares_router
 from .routes.tasks import router as tasks_router
 from .routes.users import router as users_router
+from .routes.stats import router as stats_router
+from .routes.notifications import router as notifications_router
 
 app.include_router(auth_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
@@ -337,6 +339,9 @@ app.include_router(groups_router, prefix="/api")
 app.include_router(shares_router, prefix="/api")
 app.include_router(tasks_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
+app.include_router(stats_router, prefix="/api")
+app.include_router(notifications_router, prefix="/api")
+
 
 
 

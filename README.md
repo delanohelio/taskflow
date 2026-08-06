@@ -1,19 +1,16 @@
-# TaskFlow — Kanban com Gatilhos Temporais
+# TaskFlow — Kanban com Múltiplos Usuários, Notificações e Estatísticas
 
-Aplicação full-stack de gerenciamento de tarefas pessoais com quadro Kanban interativo, gatilhos temporais automáticos e subtarefas hierárquicas.
+Aplicação full-stack de gerenciamento de tarefas pessoais e colaborativas com quadro Kanban interativo, suporte a múltiplos usuários, compartilhamento com convites, delegação de subtarefas, notificações em tempo real, dashboard de estatísticas e gatilhos temporais automáticos.
 
 ## Stack Tecnológica
 
 | Camada | Tecnologia |
 |--------|------------|
-| **Backend** | Python 3.11+, FastAPI, SQLAlchemy 2.0, SQLite |
+| **Backend** | Python 3.11+, FastAPI, SQLAlchemy 2.0, SQLite, BCrypt, PyJWT |
 | **Frontend** | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide React |
 | **Drag & Drop** | @dnd-kit/core + @dnd-kit/sortable |
 
-## Pré-requisitos
-
-- **Python 3.11+** instalado
-- **Node.js 18+** e **npm** instalados
+---
 
 ## Como rodar
 
@@ -27,9 +24,6 @@ docker compose up -d
 
 # Iniciar definindo uma senha padrão customizada para o usuário administrador
 DEFAULT_ADMIN_PASSWORD=minhasenhaadmin docker compose up -d
-
-# Iniciar com senha de admin e auto-arquivamento de tarefas concluídas após 60 minutos
-DEFAULT_ADMIN_PASSWORD=minhasenhaadmin AUTO_ARCHIVE_AFTER_MINUTES=60 docker compose up -d
 ```
 
 O Frontend estará disponível em: `http://localhost:4000`  
@@ -40,199 +34,63 @@ Para parar os serviços:
 docker compose down
 ```
 
-### Autenticação de Múltiplos Usuários & Usuário Admin
+---
 
-- O sistema utiliza autenticação baseada em tokens **JWT** (JSON Web Tokens).
-- **Setup Inicial**: No primeiro acesso, o sistema cria automaticamente um usuário administrador padrão (`username: admin`).
-- A senha inicial do admin é configurável através da variável de ambiente `DEFAULT_ADMIN_PASSWORD` (padrão: `admin123`).
-- **Usuário Admin**: Possui seu próprio plano de tarefas e um menu exclusivo de **Gestão de Usuários** para criar, modificar funções (`admin` ou `user`) e gerenciar usuários.
-- **Perfil do Usuário**: Qualquer usuário pode alterar sua senha, nome completo e e-mail no menu de configurações e realizar logout a qualquer momento na sidebar.
+## Funcionalidades Principais
 
-### Compartilhamento de Atividades & Subtarefas Delegadas
+### 1. Autenticação de Múltiplos Usuários & Usuário Admin
+- **Tokens JWT**: Autenticação segura via JSON Web Tokens.
+- **Setup Inicial**: Criação automática do usuário admin (`admin`) no primeiro uso.
+- **Gestão de Usuários**: Painel administrativo para criar novos usuários e definir cargos (`admin` ou `user`).
+- **Edição de Perfil**: Modal de Configurações com abas para alterar senha, nome completo e e-mail.
 
-- O proprietário de uma tarefa pode compartilhá-la com outros usuários ou com **Grupos de Usuários**.
-- Os destinatários recebem convites na seção de **Convites** da Sidebar e devem **Aceitar** a atividade para que ela faça parte do seu plano de tarefas.
-- **Permissões**:
-  - Apenas o dono pode compartilhar ou excluir a tarefa.
-  - Usuários que aceitaram o compartilhamento podem editar o conteúdo da tarefa, subtarefas e status.
-  - Subtarefas podem ter responsáveis delegados (chips) escolhidos entre o dono e participantes do compartilhamento.
-  - Se um usuário revogar o compartilhamento, suas delegações de subtarefas são automaticamente removidas.
+### 2. Compartilhamento de Atividades & Subtarefas Delegadas
+- **Convites e Aceitação**: Compartilhe tarefas por usuário ou por **Grupos de Usuários**. Tarefas só entram no plano do destinatário **após ele aceitar o convite**.
+- **Delegação de Subtarefas**: Atribua subtarefas para si mesmo ou outros membros aceitos via chips com busca.
+- **Sair da Tarefa**: Usuários convidados podem revogar seu próprio acesso a qualquer momento através do botão **"Sair da Atividade"**.
 
-### Grupos de Usuários
+### 3. Grupos de Usuários
+- Criação e gestão de grupos de trabalho para simplificar o compartilhamento em lote de tarefas recorrentes.
 
-- Permite cadastrar grupos de usuários no menu lateral para facilitar o compartilhamento em lote de atividades recorrentes.
+### 4. Dashboard de Estatísticas & Desempenho
+- Tela analítica com métricas de produtividade, taxa de conclusão no prazo, tarefas atrasadas e distribuição visual por status e prioridade com barras de progresso.
 
-### 2. Desenvolvimento Local (Manual)
+### 5. Central de Notificações
+- Notificações em tempo real / histórico no cabeçalho superior (novos convites, tarefas prestes a vencer, atrasos e atribuições de subtarefas).
 
-#### Backend (FastAPI)
+### 6. Quadro Kanban, Listagem & Calendário Interativo
+- Alternância entre visão de Quadro Kanban (Drag & Drop), Listagem estruturada e Calendário mensal interativo.
 
-```bash
-# Na raiz do projeto
-python3 -m venv .venv
-source .venv/bin/activate       # macOS/Linux
-# .venv\Scripts\activate        # Windows
-
-pip install -r backend/requirements.txt
-
-# Iniciar o servidor na porta 8000
-uvicorn backend.app:app --reload --port 8000
-```
-
-O backend estará disponível em: `http://localhost:8000`  
-Documentação da API: `http://localhost:8000/docs`
-
-#### Frontend (React + Vite)
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-O frontend estará disponível em: `http://localhost:5173`  
-O Vite faz proxy de `/api` → `http://localhost:8000` automaticamente.
-
-## Arquitetura
-
-```
-web_app/
-├── backend/
-│   ├── app.py              # Entry point FastAPI (lifespan, CORS, rotas, auth)
-│   ├── database.py         # Engine SQLAlchemy + migrações automáticas
-│   ├── models/
-│   │   └── task.py         # Modelo ORM Task (hierárquico e auditado)
-│   ├── schemas/
-│   │   └── task.py         # Pydantic v2 schemas (request/response)
-│   ├── routes/
-│   │   └── tasks.py        # 9 endpoints REST
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── App.tsx              # Componente raiz
-│   │   ├── hooks/
-│   │   │   ├── useTasks.ts      # Custom hook (fetch + mutations)
-│   │   │   └── useAuth.ts       # Hook de autenticação de página
-│   │   ├── services/api.ts      # Cliente Axios
-│   │   ├── types/task.ts        # Tipos TypeScript
-│   │   ├── utils/               # Constantes e helpers
-│   │   └── components/
-│   │       ├── board/           # KanbanBoard, KanbanColumn, TaskCard, Banner
-│   │       ├── layout/          # Sidebar, LoginScreen
-│   │       ├── modals/          # CreateTaskModal, TaskDetailModal
-│   │       └── ui/              # PriorityIndicator, TagBadge, ProgressBar
-│   ├── index.html
-│   ├── vite.config.ts
-│   └── package.json
-└── README.md
-```
-
-## Regras de Negócio
-
-### Gatilho Temporal (Stand-by)
-
-- Se `start_datetime` > agora → status é forçado para `standby`
-- A tarefa **não aparece** nas colunas do Kanban enquanto em standby
-- Quando o relógio ultrapassa `start_datetime` → promovida automaticamente para `todo`
-- **Promoção Manual**: Tarefas em standby podem ser iniciadas manualmente a qualquer momento através da tela dedicada ou do modal de detalhes (limpando o agendamento e mudando status para `todo`).
-- **Adiamento Manual**: Qualquer tarefa ativa pode ser adiada ao definir seu `start_datetime` no futuro, o que reverterá seu status para `standby` e a removerá temporariamente das colunas do quadro ativo.
-- O backend verifica isso a cada 60 segundos (background task) e o frontend a cada 30 segundos (polling)
-
-### Proteção por Senha (Opcional)
-
-- Se a variável de ambiente `PAGE_PASSWORD` estiver definida no servidor, o frontend exibirá uma tela de login restrita antes de renderizar a interface de tarefas.
-- Senha correta é guardada no `localStorage` do navegador para evitar a necessidade de logins repetitivos.
-- Para deslogar e bloquear o painel novamente, basta clicar no botão **Sair** no rodapé do menu lateral (Sidebar).
-
-### Auto-arquivamento de Tarefas Concluídas (Opcional)
-
-- Permite configurar o arquivamento automático de tarefas no status `done` após um período de tempo.
-- Pode ser configurado através da variável de ambiente `AUTO_ARCHIVE_AFTER_MINUTES` ou diretamente na interface do usuário através do **Menu de Configurações**.
-- Uma tarefa executada em segundo plano no servidor verifica as tarefas concluídas a cada 60 segundos e as arquiva caso tenham atingido o tempo limite.
-
-### Menu de Configurações e Backup de Dados
-
-- Acessível no menu lateral (Sidebar) através de um ícone de engrenagem.
-- Permite configurar e ajustar o período de auto-arquivamento em tempo de execução sem reiniciar a aplicação. O valor é persistido em `/app/data/settings.json`.
-- Contém um botão para **Arquivar Todas as Concluídas** imediatamente.
-- **Backup & Restauração**: Possibilita salvar (exportar) um arquivo `.json` com o estado completo de todas as tarefas e configurações, além de importar um backup existente para restaurar a base de dados.
-
-### Seletor de Tags com Auto-complete Customizado
-
-- A caixa de seleção de tags foi remodelada para um seletor moderno baseado em chips.
-- Exibe sugestões inteligentes de tags já cadastradas ao digitar, permitindo adicioná-las clicando ou apertando Enter.
-- As tags são exibidas como chips elegantes que podem ser removidos clicando no botão "X" interno do chip.
-
-### Visão de Calendário Interativa
-
-- Nova visão disponível no menu lateral que organiza todas as tarefas datadas (com início ou entrega agendados) em uma grade mensal.
-- Permite navegar facilmente entre meses anteriores/posteriores e voltar para o dia atual ("Hoje").
-- Cada dia no calendário exibe mini cards contendo o horário, título da tarefa e indicação visual de prioridade.
-- Totalmente integrado: clicar em uma tarefa abre o modal completo de detalhes e edição.
-- Responsividade mobile: Em telas pequenas, a grade exibe pontos coloridos de atividades, abrindo uma lista detalhada expansível logo abaixo do calendário ao tocar em qualquer dia.
-
-### Ordenação Inteligente por Prioridade e Prazo
-
-- Tanto o Quadro Kanban quanto a Listagem agora ordenam as tarefas automaticamente.
-- Critério de ordenação: maior Prioridade no topo (`high` > `normal` > `low`), e em caso de empate, prazo de entrega mais próximo (`due_date` ascendente). Tarefas sem prazo de entrega vão para o final dentro de sua prioridade.
-
-### Datas com Horário Opcional
-
-- Ao criar ou editar uma tarefa, definir o horário para a data de **Início** é opcional.
-- Se o horário não for definido explicitamente, os seguintes padrões inteligentes são aplicados automaticamente:
-  - **Início**: `09:00` do dia selecionado.
-  - **Entrega** (opcional no modal): `23:59` do dia selecionado.
-
-### Responsividade (Mobile e Tablets)
-
-- Toda a aplicação foi otimizada para smartphones e tablets.
-- O menu lateral (Sidebar) vira um menu deslizante (sliding drawer) acionado por um botão Hamburger.
-- As colunas do Kanban se empilham verticalmente em telas pequenas.
-- Os modais de tarefas passam a ocupar tela cheia com rolagem interna para melhorar a usabilidade em celulares.
-- Permite alterar o status da tarefa diretamente por botões rápidos de ação no Card ou no modal de Detalhes, facilitando o uso em telas sensíveis ao toque.
-
-### Arquivamento Manual de Tarefas
-
-- Tarefas concluídas ou que não são mais necessárias podem ser arquivadas (`archived = true`).
-- Tarefas arquivadas são completamente ocultadas do Quadro Kanban e da Listagem principal.
-- Podem ser visualizadas, restauradas (desarquivadas) ou excluídas definitivamente na tela de **Arquivadas**.
-
-### Subtarefas
-
-- Qualquer tarefa pode ter subtarefas infinitas (vinculadas por `parent_id`)
-- Cards exibem progresso das subtarefas (ex: "2/5 concluídas")
-- Deletar uma tarefa pai exclui todas as subtarefas (cascade)
-
-### Revisão Diária
-
-- Banner no topo do quadro mostra: "Você tem X tarefas para hoje e Y atrasadas"
-- Tarefas atrasadas (due_date < hoje e não concluídas) aparecem na sidebar
+---
 
 ## Endpoints da API
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| `GET` | `/api/tasks` | Listar tarefas (filtros: status, tag, parent_id, archived) |
-| `POST` | `/api/tasks` | Criar tarefa |
-| `GET` | `/api/tasks/{id}` | Detalhe com subtarefas |
-| `PATCH` | `/api/tasks/{id}` | Atualizar campos |
-| `PATCH` | `/api/tasks/{id}/status` | Mover entre colunas (drag & drop) |
-| `DELETE` | `/api/tasks/{id}` | Deletar (cascade) |
-| `GET` | `/api/tasks/board` | Board agrupado por status |
-| `GET` | `/api/tasks/review` | Resumo diário |
-| `POST` | `/api/tasks/trigger-temporal` | Forçar re-avaliação temporal |
-| `POST` | `/api/tasks/archive-done` | Arquivar todas as tarefas concluídas imediatamente |
+| `POST` | `/api/auth/login` | Autenticação de usuário por login/senha |
+| `GET` | `/api/auth/me` | Retorna o perfil do usuário logado |
+| `PATCH` | `/api/auth/profile` | Atualiza nome completo, e-mail ou senha do perfil |
+| `GET` | `/api/auth/settings` | Retorna as preferências individuais do usuário |
+| `PATCH` | `/api/auth/settings` | Atualiza preferências individuais do usuário |
+| `GET` | `/api/users` | Busca pública de usuários (para autocomplete) |
+| `GET` | `/api/admin/users` | Gestão de usuários (exclusivo Admin) |
+| `GET` | `/api/user-groups` | CRUD de Grupos de Usuários |
+| `POST` | `/api/tasks/{id}/share` | Enviar convites de compartilhamento de tarefa |
+| `POST` | `/api/shares/{id}/accept` | Aceitar convite de compartilhamento |
+| `POST` | `/api/shares/{id}/reject` | Recusar convite de compartilhamento |
+| `POST` | `/api/shares/leave/{id}` | Sair de uma tarefa compartilhada (Destinatário) |
+| `GET` | `/api/stats` | Retorna estatísticas de desempenho e produtividade |
+| `GET` | `/api/notifications` | Lista as notificações do usuário logado |
+| `PATCH` | `/api/notifications/{id}/read` | Marca uma notificação como lida |
+| `POST` | `/api/notifications/read-all` | Marca todas as notificações como lidas |
+| `GET` | `/api/tasks/board` | Quadro Kanban agrupado por status |
+| `POST` | `/api/tasks/archive-done` | Arquivar tarefas concluídas |
 | `GET` | `/api/backup/export` | Exportar backup completo em JSON |
-| `POST` | `/api/backup/import` | Importar/restaurar backup completo em JSON |
-| `GET` | `/api/settings` | Retorna as configurações atuais do app |
-| `PATCH` | `/api/settings` | Atualiza as configurações do app (auto-arquivamento) |
-| `GET` | `/api/auth/config` | Retorna se a senha é exigida no painel |
-| `POST` | `/api/auth/verify` | Valida a senha enviada pelo usuário |
+| `POST` | `/api/backup/import` | Importar backup completo em JSON |
 
-## Roadmap e Agent Skills
+---
 
-- **Novas Features & Histórico**: O arquivo [.agents/skills/FEATURES.md](file:///.agents/skills/FEATURES.md) contém o levantamento detalhado das novas funcionalidades em especificação (Múltiplos Usuários, Compartilhamento, Grupos de Usuários) e a lista completa de features já realizadas.
-- **Agent Skills**:
-  - [docker-setup](file:///.agents/skills/docker-setup/SKILL.md): Instruções para gerenciamento do ambiente TaskFlow com Docker e Docker Compose.
-  - [taskflow-api](file:///.agents/skills/taskflow-api/SKILL.md): Templates e guia de uso da API REST FastAPI para gerenciar tarefas e backups.
-
-
+## Agent Skills
+- [docker-setup](file:///.agents/skills/docker-setup/SKILL.md): Instruções para gerenciamento do ambiente TaskFlow com Docker e Docker Compose.
+- [taskflow-api](file:///.agents/skills/taskflow-api/SKILL.md): Documentação completa da API REST FastAPI.
+- [FEATURES](file:///.agents/skills/FEATURES.md): Avaliação de status e especificações das novas funcionalidades.

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_user
 from ..database import get_db
 from ..models.group import UserGroup
+from ..models.notification import Notification
 from ..models.task import Task
 from ..models.task_share import TaskShare
 from ..models.user import User
@@ -57,6 +58,16 @@ def share_task(
             new_share = TaskShare(task_id=task_id, user_id=uid, status="pending")
             db.add(new_share)
             created_or_existing_shares.append(new_share)
+
+            # Send notification to target user
+            notification = Notification(
+                user_id=uid,
+                title="Novo Convite de Atividade",
+                message=f"{current_user.full_name} (@{current_user.username}) convidou você para colaborar na atividade '{task.title}'.",
+                type="invitation",
+                link_task_id=task.id,
+            )
+            db.add(notification)
         else:
             created_or_existing_shares.append(existing_share)
 
@@ -165,6 +176,37 @@ def reject_share(
     )
 
 
+@router.post("/shares/leave/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def leave_shared_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Leave a shared task (recipient revoking their own share access)."""
+    share = (
+        db.query(TaskShare)
+        .filter(TaskShare.task_id == task_id, TaskShare.user_id == current_user.id)
+        .first()
+    )
+    if not share:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Compartilhamento não encontrado para este usuário.",
+        )
+
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if task:
+        subtask_ids = [c.id for c in task.children] + [task.id]
+        subtasks = db.query(Task).filter(Task.id.in_(subtask_ids)).all()
+        for sub in subtasks:
+            if current_user in sub.assignees:
+                sub.assignees.remove(current_user)
+
+    db.delete(share)
+    db.commit()
+    return None
+
+
 @router.delete("/shares/{share_id}", status_code=status.HTTP_204_NO_CONTENT)
 def revoke_share(
     share_id: int,
@@ -197,10 +239,7 @@ def revoke_share(
 
     # Remove subtask delegations for user_id_to_remove under task_id_to_clean
     if task:
-        # Task subtasks (including the task itself if subtask)
-        subtask_ids = [c.id for c in task.children]
-        subtask_ids.append(task.id)
-
+        subtask_ids = [c.id for c in task.children] + [task.id]
         subtasks = db.query(Task).filter(Task.id.in_(subtask_ids)).all()
         target_user = db.query(User).filter(User.id == user_id_to_remove).first()
         if target_user:
