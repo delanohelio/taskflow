@@ -170,6 +170,18 @@ export interface Notification {
   created_at: string;
 }
 
+export interface DayActivity {
+  date: string;
+  day_name: string;
+  completed: number;
+  created: number;
+}
+
+export interface TagMetric {
+  tag: string;
+  count: number;
+}
+
 export interface UserStats {
   total_tasks: number;
   completed_tasks: number;
@@ -191,5 +203,8 @@ export interface UserStats {
     done: number;
     standby: number;
   };
+  recent_activity_trend?: DayActivity[];
+  tag_distribution?: TagMetric[];
+  productivity_score?: number;
 }
 

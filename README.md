@@ -1,18 +1,41 @@
-# TaskFlow — Kanban com Múltiplos Usuários, Notificações e Estatísticas
+# TaskFlow v3.0 — Kanban Inteligente & Analytics de Produtividade
 
-Aplicação full-stack de gerenciamento de tarefas pessoais e colaborativas com quadro Kanban interativo, suporte a múltiplos usuários, compartilhamento com convites, delegação de subtarefas, notificações em tempo real, dashboard de estatísticas e gatilhos temporais automáticos.
+Aplicação full-stack moderna de gerenciamento de tarefas pessoais e colaborativas com quadro Kanban interativo, suporte a múltiplos usuários, compartilhamento com convites, delegação de subtarefas, notificações em tempo real, dashboard analítico com gráficos customizados e animações de alta performance, e gatilhos temporais automáticos.
+
+---
+
+## Novidades da Versão 3.0
+
+- 📊 **Dashboard Analítico Executivo com Gráficos Customizados:**
+  - **Donut Chart Interativo:** Distribuição de tarefas por status (A Fazer, Fazendo, Concluído, Stand-by) com expansão dinâmica e tooltips em tempo real.
+  - **Gráfico de Velocidade e Throughput:** Histórico de atividade dos últimos 7 dias comparando tarefas concluídas vs criadas.
+  - **Medidores Radiais de Eficiência:** Indicadores visuais de Score Geral de Produtividade, Taxa de Entrega no Prazo e Conclusão.
+  - **Equilíbrio de Prioridades & Categorias:** Barra segmentada de prioridades e gráfico de distribuição por tags.
+- ⚡ **Otimizações Extremas de Desempenho:**
+  - **SQLite WAL Mode:** Configuração de `PRAGMA journal_mode=WAL` e `synchronous=NORMAL` para máxima concorrência e velocidade de leitura/escrita.
+  - **Índices de Banco de Dados:** Índices compostos criados para queries de status, prazos, compartilhamentos e notificações.
+  - **Componentes Memoizados:** Redução de re-renders no Kanban através de `React.memo` para renderização fluida a 60 FPS durante drag & drop e filtros.
+  - **Zero Bloat de Gráficos:** Gráficos desenvolvidos em SVG nativo responsivo, mantendo o bundle leve e carregamento instantâneo.
+- 🎨 **UX e Design System Renovado:**
+  - Paleta com tons indigo, esmeralda, rose e ardósia com suporte a micro-animações, elevações suaves, glassmorphism e transições refinadas.
+  - Responsividade aprimorada para dispositivos móveis, tablets e monitores widescreen.
+- 🧹 **Repositório Otimizado:**
+  - Remoção de arquivos desnecessários de compilação e workflows obsoletos.
+
+---
 
 ## Stack Tecnológica
 
 | Camada | Tecnologia |
 |--------|------------|
-| **Backend** | Python 3.11+, FastAPI, SQLAlchemy 2.0, SQLite, BCrypt, PyJWT |
-| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide React |
+| **Backend** | Python 3.11+, FastAPI, SQLAlchemy 2.0, SQLite (WAL Mode), BCrypt, PyJWT |
+| **Frontend** | React 19, TypeScript, Vite 6, Tailwind CSS v4, Lucide React |
+| **Gráficos & Dataviz** | Custom SVG Animated Charts (Donut, Velocity Bar, Radial Gauges) |
 | **Drag & Drop** | @dnd-kit/core + @dnd-kit/sortable |
 
 ---
 
-## Como rodar
+## Como Rodar
 
 ### 1. Usando Docker (Recomendado)
 
@@ -34,6 +57,24 @@ Para parar os serviços:
 docker compose down
 ```
 
+### 2. Desenvolvimento Local
+
+#### Backend:
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn backend.app:app --reload --port 8000
+```
+
+#### Frontend:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
 ---
 
 ## Funcionalidades Principais
@@ -49,16 +90,13 @@ docker compose down
 - **Delegação de Subtarefas**: Atribua subtarefas para si mesmo ou outros membros aceitos via chips com busca.
 - **Sair da Tarefa**: Usuários convidados podem revogar seu próprio acesso a qualquer momento através do botão **"Sair da Atividade"**.
 
-### 3. Grupos de Usuários
-- Criação e gestão de grupos de trabalho para simplificar o compartilhamento em lote de tarefas recorrentes.
+### 3. Dashboard de Estatísticas & Performance (v3.0)
+- Tela analítica com métricas de produtividade, taxa de conclusão no prazo, tarefas atrasadas, gráfico de velocidade semanal e distribuição visual por status e prioridade.
 
-### 4. Dashboard de Estatísticas & Desempenho
-- Tela analítica com métricas de produtividade, taxa de conclusão no prazo, tarefas atrasadas e distribuição visual por status e prioridade com barras de progresso.
-
-### 5. Central de Notificações
+### 4. Central de Notificações
 - Notificações em tempo real / histórico no cabeçalho superior (novos convites, tarefas prestes a vencer, atrasos e atribuições de subtarefas).
 
-### 6. Quadro Kanban, Listagem & Calendário Interativo
+### 5. Quadro Kanban, Listagem & Calendário Interativo
 - Alternância entre visão de Quadro Kanban (Drag & Drop), Listagem estruturada e Calendário mensal interativo.
 
 ---
@@ -79,7 +117,7 @@ docker compose down
 | `POST` | `/api/shares/{id}/accept` | Aceitar convite de compartilhamento |
 | `POST` | `/api/shares/{id}/reject` | Recusar convite de compartilhamento |
 | `POST` | `/api/shares/leave/{id}` | Sair de uma tarefa compartilhada (Destinatário) |
-| `GET` | `/api/stats` | Retorna estatísticas de desempenho e produtividade |
+| `GET` | `/api/stats` | Retorna estatísticas de desempenho, throughput e produtividade v3.0 |
 | `GET` | `/api/notifications` | Lista as notificações do usuário logado |
 | `PATCH` | `/api/notifications/{id}/read` | Marca uma notificação como lida |
 | `POST` | `/api/notifications/read-all` | Marca todas as notificações como lidas |

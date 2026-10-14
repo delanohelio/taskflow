@@ -229,7 +229,7 @@ function TaskFlowMain() {
         {/* Dynamic Screen Area */}
         <section className="flex-1 overflow-auto">
           {activeScreen === "board" && (
-            <div className="p-8">
+            <div className="p-4 sm:p-6 md:p-8">
               <KanbanBoard
                 board={filteredBoard}
                 onMoveTask={moveTask}
@@ -238,7 +238,7 @@ function TaskFlowMain() {
             </div>
           )}
           {activeScreen === "list" && (
-            <div className="p-8">
+            <div className="p-4 sm:p-6 md:p-8">
               <TaskListView
                 tasks={filteredActiveTasks}
                 onTaskClick={(task) => setSelectedTask(task)}
@@ -247,7 +247,7 @@ function TaskFlowMain() {
             </div>
           )}
           {activeScreen === "calendar" && (
-            <div className="p-8">
+            <div className="p-4 sm:p-6 md:p-8">
               <CalendarView
                 tasks={filteredActiveTasks}
                 onTaskClick={(task) => setSelectedTask(task)}
@@ -257,7 +257,7 @@ function TaskFlowMain() {
           {activeScreen === "stats" && <StatsScreen />}
 
           {activeScreen === "standby" && (
-            <div className="p-8">
+            <div className="p-4 sm:p-6 md:p-8">
               <StandbyScreen
                 tasks={filteredStandbyTasks}
                 onTaskClick={(task) => setSelectedTask(task)}
@@ -267,7 +267,7 @@ function TaskFlowMain() {
             </div>
           )}
           {activeScreen === "archived" && (
-            <div className="p-8">
+            <div className="p-4 sm:p-6 md:p-8">
               <ArchivedScreen
                 tasks={filteredArchivedTasks}
                 onTaskClick={(task) => setSelectedTask(task)}

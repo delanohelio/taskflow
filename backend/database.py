@@ -14,11 +14,24 @@ _db_dir = Path(__file__).resolve().parent
 _db_path = os.environ.get("DB_PATH", str(_db_dir / "tasks.db"))
 DB_URL = f"sqlite:///{_db_path}"
 
+from sqlalchemy import text, event
+
 engine = create_engine(
     DB_URL,
     echo=False,
     connect_args={"check_same_thread": False},  # required for SQLite + threads
 )
+
+# Enable WAL mode, normal synchronous, and foreign keys for high concurrency performance
+@event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA foreign_keys=ON")
+    finally:
+        cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -26,7 +39,6 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base.metadata.create_all(bind=engine)
 
 # Add migration to ensure 'archived' column exists
-from sqlalchemy import text
 with engine.begin() as conn:
     try:
         conn.execute(text("SELECT archived FROM tasks LIMIT 1"))
@@ -58,6 +70,17 @@ with engine.begin() as conn:
             print("Successfully migrated tasks table to include 'owner_id' column.")
         except Exception as e:
             print(f"Migration error (owner_id): {e}")
+
+# Performance indexes for fast querying in v3.0
+with engine.begin() as conn:
+    try:
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_tasks_owner_status ON tasks(owner_id, status)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_tasks_parent_id ON tasks(parent_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_task_shares_user_status ON task_shares(user_id, status)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read)"))
+    except Exception as e:
+        print(f"Index creation note: {e}")
 
 
 def init_default_admin():

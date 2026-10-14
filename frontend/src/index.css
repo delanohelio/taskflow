@@ -1,12 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
-
 
 /* ── Tailwind v4 theme (replaces tailwind.config.js) ─────────────────── */
 @theme {
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
-  /* Brand palette — indigo-tinted blue */
+  /* Brand palette — vibrant indigo-tinted modern blue */
   --color-brand-50: #eef2ff;
   --color-brand-100: #e0e7ff;
   --color-brand-200: #c7d2fe;
@@ -18,9 +17,10 @@
   --color-brand-800: #3730a3;
   --color-brand-900: #312e81;
 
-  /* Surface / background palette — slate-based */
+  /* Surface / background palette — slate-based with deep contrast */
   --color-surface-50: #f8fafc;
   --color-surface-100: #f1f5f9;
+  --color-surface-150: #e8eef5;
   --color-surface-200: #e2e8f0;
   --color-surface-300: #cbd5e1;
   --color-surface-400: #94a3b8;
@@ -35,6 +35,7 @@
   --color-warning: #f59e0b;
   --color-success: #10b981;
   --color-info: #3b82f6;
+  --color-purple: #8b5cf6;
 }
 
 /* ── Global styles ─────────────────────────────────────────────────────── */
@@ -44,55 +45,103 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: var(--color-surface-50);
   color: var(--color-surface-900);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 /* ── Custom scrollbar ──────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--color-surface-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--color-surface-300); border-radius: 9999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-surface-400); }
+
+/* ── Modern Glassmorphism & Elevation ─────────────────────────────────── */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+}
+
+.glass-card:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+}
 
 /* ── Drag-over column feedback ─────────────────────────────────────────── */
 .drag-over {
-  background-color: color-mix(in srgb, var(--color-brand-500) 8%, transparent);
-  outline: 2px dashed var(--color-brand-400);
+  background-color: color-mix(in srgb, var(--color-brand-500) 10%, transparent);
+  outline: 2px dashed var(--color-brand-500);
   outline-offset: -2px;
-  border-radius: 12px;
+  border-radius: 16px;
 }
 
 /* ── Priority dot pulse ────────────────────────────────────────────────── */
 @keyframes priority-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.6; transform: scale(1.15); }
+  50%      { opacity: 0.55; transform: scale(1.2); }
 }
 .priority-dot-high { animation: priority-pulse 2s ease-in-out infinite; }
 
-/* ── Card entrance ─────────────────────────────────────────────────────── */
+/* ── Smooth Fade and Slide Animations ─────────────────────────────────── */
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.card-enter { animation: fadeSlideIn 0.25s ease-out; }
+.card-enter {
+  animation: fadeSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 
-/* ── Modal backdrop ────────────────────────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-.modal-backdrop { animation: fadeIn 0.2s ease-out; }
-.modal-content  { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.modal-backdrop { animation: fadeIn 0.18s ease-out; }
+.modal-content  { animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
 
 /* ── Subtle glow on drag ──────────────────────────────────────────────── */
 .dragging {
-  opacity: 0.85;
-  box-shadow: 0 12px 28px -4px rgba(99, 102, 241, 0.25),
-              0 4px 10px -2px rgba(99, 102, 241, 0.15);
-  transform: rotate(2deg) scale(1.03);
+  opacity: 0.92;
+  box-shadow: 0 16px 32px -4px rgba(79, 70, 229, 0.3),
+              0 6px 12px -2px rgba(79, 70, 229, 0.18);
+  transform: rotate(2.5deg) scale(1.04);
   z-index: 50;
+}
+
+/* ── Chart & Metric Animations ────────────────────────────────────────── */
+@keyframes barGrow {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+.chart-bar-grow {
+  transform-origin: bottom;
+  animation: barGrow 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes gaugeStroke {
+  from { stroke-dashoffset: 400; }
+}
+.chart-gauge-animated {
+  transition: stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes donutSpinIn {
+  from { transform: rotate(-90deg) scale(0.85); opacity: 0; }
+  to   { transform: rotate(-90deg) scale(1); opacity: 1; }
+}
+.donut-svg-enter {
+  animation: donutSpinIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* ── Sidebar active state ──────────────────────────────────────────────── */
@@ -100,6 +149,17 @@ body {
   background: var(--color-brand-50);
   color: var(--color-brand-700);
   font-weight: 600;
+  position: relative;
+}
+.sidebar-item-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15%;
+  height: 70%;
+  width: 3.5px;
+  background: var(--color-brand-600);
+  border-radius: 0 4px 4px 0;
 }
 
 /* ── Markdown styling inside Task Descriptions ─────────────────────────── */

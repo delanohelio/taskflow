@@ -82,7 +82,7 @@ export default function Sidebar({
   const overdueCount = board.overdue.length;
   const standbyCount = board.standby.length;
 
-  const appVersion = import.meta.env.VITE_APP_VERSION || "v1.0.0";
+  const appVersion = import.meta.env.VITE_APP_VERSION || "v3.0.0";
 
   return (
     <>
@@ -101,19 +101,19 @@ export default function Sidebar({
       >
         {/* Logo */}
         <div className="flex items-center gap-2.5 border-b border-surface-100 px-5 py-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 shadow-sm">
-            <Zap className="h-4 w-4 text-white" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-indigo-700 shadow-md shadow-brand-500/20 text-white">
+            <Zap className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h1 className="text-base font-bold tracking-tight text-surface-900">
+              <h1 className="text-base font-black tracking-tight text-surface-900">
                 TaskFlow
               </h1>
-              <span className="rounded-md bg-purple-100 px-1.5 py-0.2 text-[10px] font-extrabold text-purple-700 border border-purple-200">
+              <span className="rounded-md bg-gradient-to-r from-brand-50 to-indigo-50 px-1.5 py-0.5 text-[10px] font-extrabold text-brand-700 border border-brand-200">
                 {appVersion}
               </span>
             </div>
-            <p className="text-[11px] text-surface-400">Kanban Temporal</p>
+            <p className="text-[11px] font-medium text-surface-400">Kanban & Analytics 3.0</p>
           </div>
         </div>
 

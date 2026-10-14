@@ -20,12 +20,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_APP_VERSION: ${APP_VERSION:-v1.0.0}
+        VITE_APP_VERSION: ${APP_VERSION:-v3.0.0}
     container_name: taskflow-frontend
     ports:
       - "4000:80"
     environment:
-      - VITE_APP_VERSION=${APP_VERSION:-v1.0.0}
+      - VITE_APP_VERSION=${APP_VERSION:-v3.0.0}
     depends_on:
       - backend
     restart: unless-stopped

@@ -43,7 +43,12 @@ export default function LoginScreen() {
             <KeyRound className="h-7 w-7 text-white" />
           </div>
 
-          <h2 className="text-2xl font-bold tracking-tight text-white">Login no TaskFlow</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-black tracking-tight text-white">TaskFlow</h2>
+            <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-extrabold text-brand-200 border border-white/20">
+              v3.0
+            </span>
+          </div>
           <p className="mt-2 text-center text-sm text-brand-100">
             Informe suas credenciais para acessar seu plano de tarefas.
           </p>

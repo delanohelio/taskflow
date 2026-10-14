@@ -131,8 +131,8 @@ async def _temporal_trigger_loop():
 
 app = FastAPI(
     title="TaskFlow API",
-    description="Kanban board com gatilhos temporais — FastAPI + SQLite",
-    version="1.0.0",
+    description="Kanban board com gatilhos temporais e analytics — FastAPI + SQLite",
+    version="3.0.0",
     lifespan=lifespan,
 )
 

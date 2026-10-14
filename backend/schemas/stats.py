@@ -1,5 +1,6 @@
 """Pydantic schemas for User Statistics."""
 
+from typing import List
 from pydantic import BaseModel
 
 
@@ -16,6 +17,18 @@ class StatusDistribution(BaseModel):
     standby: int = 0
 
 
+class DayActivity(BaseModel):
+    date: str
+    day_name: str
+    completed: int = 0
+    created: int = 0
+
+
+class TagMetric(BaseModel):
+    tag: str
+    count: int = 0
+
+
 class UserStatsResponse(BaseModel):
     total_tasks: int
     completed_tasks: int
@@ -28,3 +41,6 @@ class UserStatsResponse(BaseModel):
     on_time_rate_percent: float
     by_priority: PriorityDistribution
     by_status: StatusDistribution
+    recent_activity_trend: List[DayActivity] = []
+    tag_distribution: List[TagMetric] = []
+    productivity_score: int = 0
