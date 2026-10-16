@@ -33,6 +33,7 @@ import PriorityIndicator from "@/components/ui/PriorityIndicator";
 import TagBadge from "@/components/ui/TagBadge";
 import ProgressBar from "@/components/ui/ProgressBar";
 import TagInput from "@/components/ui/TagInput";
+import MarkdownEditor from "@/components/ui/MarkdownEditor";
 
 interface TaskDetailModalProps {
   task: Task;
@@ -456,15 +457,11 @@ export default function TaskDetailModal({
               type="text"
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
-              className="mb-3 w-full rounded-lg border border-surface-300 px-3 py-2 text-lg font-bold focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="mb-3 w-full rounded-xl border border-surface-300 px-3.5 py-2 text-lg font-bold focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               autoFocus
             />
           ) : (
-            <h1
-              className="mb-3 cursor-pointer text-xl font-bold text-surface-900 hover:text-brand-700"
-              onClick={() => setIsEditing(true)}
-              title="Clique para editar"
-            >
+            <h1 className="mb-3 text-xl sm:text-2xl font-bold tracking-tight text-surface-900 select-text">
               {task.title}
             </h1>
           )}
@@ -491,28 +488,42 @@ export default function TaskDetailModal({
 
           {/* Description */}
           {isEditing ? (
-            <textarea
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              rows={4}
-              className="mb-4 w-full resize-none rounded-lg border border-surface-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              placeholder="Adicionar descrição (Markdown aceito)..."
-            />
+            <div className="mb-5 space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-surface-500">
+                Descrição da Tarefa (Markdown Rico)
+              </label>
+              <MarkdownEditor
+                value={editDescription}
+                onChange={setEditDescription}
+                placeholder="Detalhes da tarefa, links e notas de entrega em Markdown..."
+                minHeight="180px"
+              />
+            </div>
           ) : (
-            <div
-              className="mb-4 cursor-pointer rounded-lg p-2 text-sm leading-relaxed text-surface-600 hover:bg-surface-50"
-              onClick={() => setIsEditing(true)}
-              title="Clique para editar"
-            >
+            <div className="mb-5 rounded-2xl border border-surface-200/80 bg-surface-50/50 p-4 transition-colors">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-surface-150">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-surface-400">
+                  Descrição
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold text-brand-600 hover:bg-brand-50 hover:text-brand-700 transition-colors cursor-pointer"
+                  title="Editar descrição da tarefa"
+                >
+                  <Edit3 className="h-3 w-3" />
+                  Editar Descrição
+                </button>
+              </div>
               {task.description ? (
                 <div
-                  className="prose max-w-none"
+                  className="prose max-w-none text-surface-800 select-text leading-relaxed"
                   dangerouslySetInnerHTML={{ __html: marked.parse(task.description) as string }}
                 />
               ) : (
-                <span className="italic text-surface-400">
-                  Sem descrição. Clique para adicionar.
-                </span>
+                <p className="italic text-xs text-surface-400">
+                  Nenhuma descrição informada para esta tarefa.
+                </p>
               )}
             </div>
           )}

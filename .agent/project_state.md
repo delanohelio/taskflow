@@ -4,13 +4,15 @@
 - **Current Phase:** Phase 5: Comprehensive Full-Stack Review → READY_FOR_DEPLOY
 - **Active Persona:** Master Orchestrator (`web-dev-orchestrator`)
 - **Version Target:** `v3.0.0` (Completed)
-- **Last Updated:** 2026-10-14
+- **Last Updated:** 2026-10-16
 
 ## Active Technology Stack
 - **Backend:** Python 3.11+ / FastAPI, Pydantic v2, SQLAlchemy 2.0, SQLite WAL mode with `PRAGMA synchronous=NORMAL`, high-performance composite indexes, JWT auth.
 - **Frontend:** React 19, TypeScript, Vite 6, Tailwind CSS v4, Lucide React, dnd-kit.
 - **Charts & Data Visualization:** Custom SVG/Canvas animated charts (Donut status distribution with interactive expansion and tooltips, 7-day velocity/throughput bar chart, radial efficiency gauges, segmented priority breakdown, and category tag matrix) — zero heavy third-party bloat, ultra-light bundle, 60fps animations.
-- **Performance Optimizations:** Component memoization (`React.memo` on `TaskCard` and `KanbanColumn`), Vite chunk code-splitting (`dnd`, `icons`), responsive mobile/desktop padding, zero CLS.
+- **PWA & Mobile App Support:** Web App Manifest (`manifest.webmanifest`), Service Worker (`sw.js`), Apple Touch Icon (`apple-touch-icon.png`), high-res icons (192px, 512px, 512px maskable), install prompt hook (`usePWAInstall`), and guidance modal for iOS (`InstallAppModal`).
+- **Markdown & Content Editing:** Rich Markdown editor (`MarkdownEditor.tsx`) with bold, italic, headings, lists, checklists, code blocks, quotes, interactive link creation dialog, and live preview. Read-only presentation in `TaskDetailModal.tsx` allowing text selection and link interaction without accidental edit mode triggering.
+- **Desktop UX & Responsiveness:** Collapsible sidebar on PC with toggle button in header and sidebar header, persistent state in `localStorage`, and responsive padding.
 
 ## 5-Phase Delivery Lifecycle Tracker
 - [x] **Phase 1: Discovery, Scope & Stack Sizing**
@@ -26,7 +28,7 @@
   - Sprint 2: Frontend Design System & Custom Chart Components (`DonutChart.tsx`, `ActivityVelocityChart.tsx`, `RadialGaugeMeter.tsx`, `PriorityBarBreakdown.tsx`, `TagDistributionChart.tsx`).
   - Sprint 3: Revamped Stats Dashboard (`StatsScreen.tsx`), polished Kanban (`KanbanColumn.tsx`, `TaskCard.tsx`), modern headers & navigation.
   - Sprint 4: Performance audit (memoization, chunk splitting, responsive padding, build validation).
+  - Sprint 5: PWA installation (Android/iPhone icons, manifest, service worker, install modal), rich markdown editor with link creator, and collapsible desktop sidebar.
 - [x] **Phase 5: Full-Stack Review & Verification**
   - All TypeScript and Python builds pass with 0 errors.
-  - Repository cleaned of unnecessary files and workflows.
   - Status: READY_FOR_DEPLOY.

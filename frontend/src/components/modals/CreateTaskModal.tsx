@@ -5,6 +5,7 @@ import { X, CalendarPlus } from "lucide-react";
 import type { CreateTaskPayload, Priority } from "@/types/task";
 import { PRIORITY_CONFIG } from "@/utils/constants";
 import TagInput from "@/components/ui/TagInput";
+import MarkdownEditor from "@/components/ui/MarkdownEditor";
 
 interface CreateTaskModalProps {
   parentId?: number | null;
@@ -108,16 +109,14 @@ export default function CreateTaskModal({
 
           {/* Description */}
           <div>
-            <label htmlFor="task-desc" className="mb-1 block text-sm font-medium text-surface-700">
-              Descrição
+            <label className="mb-1 block text-sm font-medium text-surface-700">
+              Descrição (Markdown Rico)
             </label>
-            <textarea
-              id="task-desc"
+            <MarkdownEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Detalhes adicionais..."
-              rows={3}
-              className="w-full resize-none rounded-lg border border-surface-300 bg-white px-3 py-2.5 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              onChange={setDescription}
+              placeholder="Detalhes adicionais, notas e links..."
+              minHeight="140px"
             />
           </div>
 

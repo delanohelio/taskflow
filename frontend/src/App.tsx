@@ -1,9 +1,10 @@
-/** Root application component: AuthProvider + sidebar + screens + modals. */
+/** Root application component: AuthProvider + sidebar + screens + modals + PWA installer. */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Menu } from "lucide-react";
+import { Loader2, Menu, PanelLeftClose, PanelLeftOpen, Smartphone } from "lucide-react";
 import type { Task } from "@/types/task";
 import { useTasks } from "@/hooks/useTasks";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { fetchInvitations } from "@/services/api";
 
@@ -22,6 +23,7 @@ import UserManagementScreen from "@/components/modals/UserManagementScreen";
 import UserGroupsScreen from "@/components/modals/UserGroupsScreen";
 import InvitationsScreen from "@/components/modals/InvitationsScreen";
 import StatsScreen from "@/components/board/StatsScreen";
+import InstallAppModal from "@/components/modals/InstallAppModal";
 import NotificationDropdown from "@/components/layout/NotificationDropdown";
 import * as api from "@/services/api";
 
@@ -42,6 +44,32 @@ function TaskFlowMain() {
     refreshBoard,
   } = useTasks(isAuthenticated);
 
+  const {
+    canInstall,
+    isIOS,
+    showIOSModal,
+    setShowIOSModal,
+    triggerInstall,
+  } = usePWAInstall();
+
+  // Desktop sidebar collapsible state
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(() => {
+    try {
+      return localStorage.getItem("taskflow_desktop_sidebar") !== "false";
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleDesktopSidebar = useCallback(() => {
+    setDesktopSidebarOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("taskflow_desktop_sidebar", String(next));
+      } catch {}
+      return next;
+    });
+  }, []);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -166,7 +194,7 @@ function TaskFlowMain() {
           <p className="text-xs text-red-600">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+            className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 cursor-pointer"
           >
             Tentar novamente
           </button>
@@ -177,7 +205,7 @@ function TaskFlowMain() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-surface-50">
-      {/* Sidebar */}
+      {/* Sidebar with mobile overlay + desktop collapsible support */}
       <Sidebar
         board={board}
         onCreateTask={() => setShowCreateModal(true)}
@@ -194,36 +222,72 @@ function TaskFlowMain() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onOpenSettings={() => setShowSettingsModal(true)}
+        isDesktopOpen={desktopSidebarOpen}
+        onToggleDesktop={toggleDesktopSidebar}
+        onInstallApp={triggerInstall}
+        canInstallApp={canInstall}
       />
 
       {/* Main content */}
       <main className="flex flex-1 flex-col overflow-hidden w-full">
         {/* Top bar */}
-        <header className="flex-shrink-0 border-b border-surface-200 bg-white/80 px-4 md:px-8 py-4 backdrop-blur-sm flex items-center justify-between gap-3">
+        <header className="flex-shrink-0 border-b border-surface-200 bg-white/80 px-4 md:px-8 py-3.5 backdrop-blur-md flex items-center justify-between gap-3 shadow-2xs">
+          {/* Mobile menu toggle */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="md:hidden rounded-lg p-2 hover:bg-surface-100 transition-colors"
+            className="md:hidden rounded-lg p-2 text-surface-500 hover:bg-surface-100 transition-colors cursor-pointer"
             aria-label="Abrir menu"
           >
-            <Menu className="h-5 w-5 text-surface-500" />
+            <Menu className="h-5 w-5" />
           </button>
+
+          {/* Desktop menu toggle (Requirement 3: hide/show lateral menu on PC) */}
+          <button
+            onClick={toggleDesktopSidebar}
+            className="hidden md:flex items-center gap-1.5 rounded-xl border border-surface-200 bg-white px-2.5 py-1.5 text-xs font-bold text-surface-700 hover:bg-surface-100 transition-all cursor-pointer shadow-2xs shrink-0"
+            title={desktopSidebarOpen ? "Recolher menu lateral" : "Expandir menu lateral"}
+            aria-label={desktopSidebarOpen ? "Recolher menu lateral" : "Expandir menu lateral"}
+          >
+            {desktopSidebarOpen ? (
+              <PanelLeftClose className="h-4 w-4 text-surface-500" />
+            ) : (
+              <PanelLeftOpen className="h-4 w-4 text-brand-600" />
+            )}
+            <span className="hidden lg:inline">{desktopSidebarOpen ? "Recolher" : "Menu"}</span>
+          </button>
+
           <div className="flex-1 min-w-0">
             <DailyReviewBanner review={review} />
           </div>
-          <NotificationDropdown
-            onNotificationClick={async (taskId) => {
-              if (taskId) {
-                try {
-                  const t = await api.fetchTask(taskId);
-                  setSelectedTask(t);
-                } catch {
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Install Web App Button in Header (Requirement 1) */}
+            {canInstall && (
+              <button
+                onClick={triggerInstall}
+                className="flex items-center gap-1.5 rounded-xl border border-brand-200 bg-brand-50/80 px-3 py-1.5 text-xs font-bold text-brand-700 hover:bg-brand-100 hover:border-brand-300 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                title="Instalar TaskFlow no Android, iPhone ou PC"
+              >
+                <Smartphone className="h-3.5 w-3.5 text-brand-600 shrink-0" />
+                <span className="hidden sm:inline">Instalar App</span>
+              </button>
+            )}
+
+            <NotificationDropdown
+              onNotificationClick={async (taskId) => {
+                if (taskId) {
+                  try {
+                    const t = await api.fetchTask(taskId);
+                    setSelectedTask(t);
+                  } catch {
+                    refreshBoard();
+                  }
+                } else {
                   refreshBoard();
                 }
-              } else {
-                refreshBoard();
-              }
-            }}
-          />
+              }}
+            />
+          </div>
         </header>
 
         {/* Dynamic Screen Area */}
@@ -310,12 +374,21 @@ function TaskFlowMain() {
           availableTags={availableTags}
         />
       )}
+
       {showSettingsModal && (
         <SettingsModal
           onClose={() => setShowSettingsModal(false)}
           onArchiveDone={refreshBoard}
         />
       )}
+
+      {/* PWA Install Modal (for iOS & direct fallback) */}
+      <InstallAppModal
+        isOpen={showIOSModal}
+        onClose={() => setShowIOSModal(false)}
+        isIOS={isIOS}
+        onDirectInstall={triggerInstall}
+      />
     </div>
   );
 }
